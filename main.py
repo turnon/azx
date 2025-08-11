@@ -1,6 +1,11 @@
-from openai import OpenAI
 import os
 
+from openai import OpenAI
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.live import Live
+
+console = Console()
 
 def stream_response(client, messages):
     stream = client.chat.completions.create(
@@ -9,11 +14,14 @@ def stream_response(client, messages):
         stream=True,
     )
     full_response = ""
-    for chunk in stream:
-        if chunk.choices[0].delta.content:
+    with Live(console=console, auto_refresh=False) as live:
+        for chunk in stream:
             content = chunk.choices[0].delta.content
-            print(content, end="", flush=True)
-            full_response += content
+            if content:
+                full_response += content
+                markdown = Markdown(full_response)
+                live.update(markdown)
+                live.refresh()
     print()
     return full_response
 
