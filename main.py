@@ -2,7 +2,7 @@ import os
 
 from openai import OpenAI
 from renderer import render
-from storage import store
+from storage import store, history
 
 
 def stream_response(client: OpenAI, messages: list[str]):
@@ -24,8 +24,11 @@ def main():
     while True:
         try:
             user_input = input(">>> ")
-            if user_input.lower() in ("\exit"):
+            if user_input.lower() in ("\q", "\quit"):
                 break
+            elif user_input.lower() in ("\h", "\hist", "\history"):
+                print(history())
+                continue
 
             store("user", user_input)
 
