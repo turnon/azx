@@ -2,6 +2,7 @@ import os
 
 from openai import OpenAI
 from renderer import render
+from storage import store
 
 
 def stream_response(client: OpenAI, messages: list[str]):
@@ -23,12 +24,15 @@ def main():
     while True:
         try:
             user_input = input(">>> ")
-            if user_input.lower() in ("exit", "quit"):
+            if user_input.lower() in ("\exit"):
                 break
+
+            store("user", user_input)
 
             conversation.append({"role": "user", "content": user_input})
             response = stream_response(client, conversation)
             conversation.append({"role": "assistant", "content": response})
+            store("ai", response)
         except Exception as e:
             print(f"Error: {e}")
 
