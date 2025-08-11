@@ -2,17 +2,48 @@ import datetime
 import os
 
 base_dir = os.path.expanduser("~/.azx")
-loaded_at = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
 
 
-def store(role: str, msg: str):
-    session_dir = os.path.join(base_dir, loaded_at)
-    os.makedirs(session_dir, exist_ok=True)
+class Store:
+    def __init__(self):
+        self.started_at = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
+        self.conversation = []
 
-    now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
-    msg = msg if msg.endswith("\n") else f"{msg}\n"
-    with open(os.path.join(session_dir, f"{now}_{role}.md"), "w") as f:
-        f.write(msg)
+    def log(self, role: str, msg: str):
+        self.conversation.append({"role": role, "content": msg})
+
+        session_dir = os.path.join(base_dir, self.started_at)
+        os.makedirs(session_dir, exist_ok=True)
+
+        now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
+        with open(os.path.join(session_dir, f"{now}_{role}.md"), "w") as f:
+            f.write(msg)
+
+    def resume(self, started_at: str):
+        dir_path = os.path.join(base_dir, started_at)
+        if not os.path.exists(dir_path):
+            return []
+
+        self.started_at = started_at
+        self.conversation.clear()
+
+        files = [
+            f
+            for f in os.listdir(dir_path)
+            if os.path.isfile(os.path.join(dir_path, f))
+            and (f.endswith("user.md") or f.endswith("ai.md"))
+        ]
+        files.sort()
+
+        for filename in files:
+            file_path = os.path.join(dir_path, filename)
+            try:
+                with open(file_path, "r") as f:
+                    content = f.read().strip()
+                    role = "user" if filename.endswith("user.md") else "assistant"
+                    self.conversation.append({"role": role, "content": content})
+            except Exception:
+                continue
 
 
 def history() -> str:
