@@ -11,7 +11,14 @@ def stream_response(client: OpenAI, messages: list[str]):
         messages=messages,
         stream=True,
     )
-    full_response = render(stream)
+
+    chunked_content = (
+        chunk.choices[0].delta.content
+        for chunk in stream
+        if chunk.choices[0].delta.content
+    )
+
+    full_response = render(chunked_content)
     return full_response
 
 
@@ -27,7 +34,7 @@ def main():
             if user_input.lower() in ("\q", "\quit"):
                 break
             elif user_input.lower() in ("\h", "\hist", "\history"):
-                print(history())
+                render([history()])
                 continue
 
             store("user", user_input)

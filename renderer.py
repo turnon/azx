@@ -5,14 +5,12 @@ from rich.live import Live
 console = Console()
 
 
-def render(stream) -> str:
+def render(strings) -> str:
     full_response = ""
     with Live(console=console, auto_refresh=False) as live:
-        for chunk in stream:
-            content = chunk.choices[0].delta.content
-            if content:
-                full_response += content
-                markdown = Markdown(full_response)
-                live.update(markdown)
-                live.refresh()
+        for string in strings:
+            full_response += string
+            markdown = Markdown(full_response)
+            live.update(markdown)
+            live.refresh()
     return full_response
