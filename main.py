@@ -16,7 +16,7 @@ def stream_response(client: OpenAI, messages: list[str]):
 
 def main():
     client = OpenAI(
-        base_url="https://openrouter.ai/api/v1", api_key=os.getenv("CLASSMATE_KEY")
+        base_url="https://openrouter.ai/api/v1", api_key=os.getenv("AZX_KEY")
     )
     conversation = []
 
