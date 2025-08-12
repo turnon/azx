@@ -1,7 +1,9 @@
 import re
-import yaml
+import sys
 from pathlib import Path
 
+
+import yaml
 from openai import OpenAI
 from renderer import render
 from storage import Store, history
@@ -46,6 +48,12 @@ def main():
     )
 
     store = Store()
+
+    if not sys.stdin.isatty():
+        content = sys.stdin.read().strip()
+        if content:
+            store.log("user", content)
+            sys.stdin = open("/dev/tty")
 
     while True:
         try:
