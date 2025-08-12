@@ -4,6 +4,7 @@ from pathlib import Path
 
 import yaml
 
+import prompt
 from agents import Client
 from renderer import render
 from storage import Store, history
@@ -25,9 +26,11 @@ def main():
             store.log("user", content)
             sys.stdin = open("/dev/tty")
 
+    session = prompt.session()
+
     while True:
         try:
-            user_input = input(">>> ")
+            user_input = session.prompt()
             user_cmd = user_input.lower()
             if user_cmd in ("\q", "\quit"):
                 break
