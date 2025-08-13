@@ -21,6 +21,10 @@ def main():
 
     store = Store()
 
+    sys_prompt = config.get("prompt", None)
+    if sys_prompt:
+        store.log("system", sys_prompt)
+
     if not sys.stdin.isatty():
         content = sys.stdin.read().strip()
         if content:
