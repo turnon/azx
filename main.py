@@ -39,25 +39,21 @@ def main():
 
             # handle command
             user_cmd = user_input.lower()
-            if user_cmd in ("\q", "\quit"):
-                break
-            elif user_cmd in ("\s", "\sum", "\summary"):
-                talk = store.conversation.copy()
-                talk.append(
-                    {
-                        "role": "user",
-                        "content": "Summarize all talk above briefly, use single language, which is the primary language involved, with words or phrases, in one line. Your answer could contain verb/object/attribute/adverbial/complement, but no subject. Just give me the answer, no thought is need",
-                    }
+            if user_cmd in ("\?", "\help"):
+                manual = "\n".join(
+                    [
+                        f"- {cmd}"
+                        for cmd in [
+                            "\? \help",
+                            "\c \client",
+                            "\h \hist \history",
+                            "\\r \\resume",
+                            "\s \sum \summary",
+                            "\q \quit",
+                        ]
+                    ]
                 )
-                sum = "".join(list(client.stream_response(talk)))
-                store.summary(sum)
-                render([sum])
-                continue
-            elif user_cmd in ("\h", "\hist", "\history"):
-                render([history()])
-                continue
-            elif match := re.match(r"^(?:\\r|\\resume) (\d{4}_\d{4}_\d{6})$", user_cmd):
-                store.resume(match.group(1))
+                render([manual])
                 continue
             elif match := re.match(r"^(?:\\c|\\client) (.+)$", user_cmd):
                 name = match.group(1)
@@ -70,6 +66,26 @@ def main():
                 else:
                     print(f"Client '{name}' not found in config")
                 continue
+            elif user_cmd in ("\h", "\hist", "\history"):
+                render([history()])
+                continue
+            elif match := re.match(r"^(?:\\r|\\resume) (\d{4}_\d{4}_\d{6})$", user_cmd):
+                store.resume(match.group(1))
+                continue
+            elif user_cmd in ("\s", "\sum", "\summary"):
+                talk = store.conversation.copy()
+                talk.append(
+                    {
+                        "role": "user",
+                        "content": "Summarize all talk above briefly, use single language, which is the primary language involved, with words or phrases, in one line. Your answer could contain verb/object/attribute/adverbial/complement, but no subject. Just give me the answer, no thought is need",
+                    }
+                )
+                sum = "".join(list(client.stream_response(talk)))
+                store.summary(sum)
+                render([sum])
+                continue
+            elif user_cmd in ("\q", "\quit"):
+                break
 
             # handle chat
             store.log("user", user_input)
