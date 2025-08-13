@@ -36,24 +36,24 @@ def main():
 
             # handle command
             user_cmd = user_input.lower()
-            if user_cmd in ("\?", "\help"):
+            if user_cmd in ("/?", "/help"):
                 manual = "\n".join(
                     [
                         f"- {cmd}"
                         for cmd in [
-                            "\? \help",
-                            "\c \client",
-                            "\h \hist \history",
-                            "\\n \\new",
-                            "\\r \\resume",
-                            "\s \sum \summary",
-                            "\q \quit",
+                            "/? /help",
+                            "/c /client",
+                            "/h /hist /history",
+                            "/n /new",
+                            "/r /resume",
+                            "/s /sum /summary",
+                            "/q /quit",
                         ]
                     ]
                 )
                 render([manual])
                 continue
-            elif match := re.match(r"^(?:\\c|\\client) (.+)$", user_cmd):
+            elif match := re.match(r"^(?:/c|/client) (.+)$", user_cmd):
                 name = match.group(1)
                 client2_cfg = next(
                     (k for k in config["keys"] if k["name"] == name), None
@@ -64,18 +64,18 @@ def main():
                 else:
                     print(f"Client '{name}' not found in config")
                 continue
-            elif user_cmd in ("\h", "\hist", "\history"):
+            elif user_cmd in ("/h", "/hist", "/history"):
                 render([history()])
                 continue
-            elif user_cmd in ("\\n", "\\new"):
+            elif user_cmd in ("/n", "/new"):
                 store = Store()
                 store.log("system", config.get("prompt", None))
                 continue
-            elif match := re.match(r"^(?:\\r|\\resume) (\d{4}_\d{4}_\d{6})$", user_cmd):
+            elif match := re.match(r"^(?:/r|/resume) (\d{4}_\d{4}_\d{6})$", user_cmd):
                 store = Store()
                 store.resume(match.group(1))
                 continue
-            elif user_cmd in ("\s", "\sum", "\summary"):
+            elif user_cmd in ("/s", "/sum", "/summary"):
                 talk = store.conversation.copy()
                 talk.append(
                     {
@@ -87,7 +87,7 @@ def main():
                 store.summary(sum)
                 render([sum])
                 continue
-            elif user_cmd in ("\q", "\quit"):
+            elif user_cmd in ("/q", "/quit"):
                 break
 
             # handle chat
