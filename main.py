@@ -1,5 +1,6 @@
 import re
 import sys
+import traceback
 from pathlib import Path
 
 import yaml
@@ -36,6 +37,18 @@ def main():
             user_cmd = user_input.lower()
             if user_cmd in ("\q", "\quit"):
                 break
+            elif user_cmd in ("\s", "\sum", "\summary"):
+                talk = store.conversation.copy()
+                talk.append(
+                    {
+                        "role": "user",
+                        "content": "Summarize all talk above briefly, use single language, which is the primary language involved, with words or phrases, in one line. Your answer could contain verb/object/attribute/adverbial/complement, but no subject. Just give me the answer, no thought is need",
+                    }
+                )
+                sum = "".join(list(client.stream_response(talk)))
+                store.summary(sum)
+                render([sum])
+                continue
             elif user_cmd in ("\h", "\hist", "\history"):
                 render([history()])
                 continue
@@ -61,6 +74,7 @@ def main():
             store.log("assistant", whole_output)
         except Exception as e:
             print(f"Error: {e}")
+            traceback.print_exc()
 
 
 if __name__ == "__main__":

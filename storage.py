@@ -11,22 +11,45 @@ class Store:
         self.conversation = []
 
     def log(self, role: str, msg: str):
+        self.ended_at = _now_str()
         self.conversation.append({"role": role, "content": msg})
 
-        session_dir = os.path.join(base_dir, self.started_at)
-        os.makedirs(session_dir, exist_ok=True)
-
-        self.ended_at = _now_str()
-        with open(os.path.join(session_dir, f"{self.ended_at}.{role}.md"), "w") as f:
+        os.makedirs(self._loc(), exist_ok=True)
+        with open(os.path.join(self._loc(), f"{self.ended_at}.{role}.md"), "w") as f:
             f.write(msg)
 
-    def resume(self, started_at: str):
-        dir_path = os.path.join(base_dir, started_at)
-        if not os.path.exists(dir_path):
-            return []
+    def summary(self, sum: str):
+        with open(os.path.join(self._loc(), f"{self.ended_at}.sum.md"), "w") as f:
+            f.write(sum)
 
+    def sum_or_quest(self):
+        def last_summary():
+            files = [
+                f
+                for f in os.listdir(self._loc())
+                if os.path.isfile(os.path.join(self._loc(), f)) and f.endswith("sum.md")
+            ]
+
+            if not files:
+                return ""
+
+            files.sort()
+
+            with open(os.path.join(self._loc(), files[-1]), "r") as f:
+                return f.read().strip()
+
+        def first_question():
+            if self.conversation:
+                return self.conversation[0]["content"]
+
+        return last_summary() or first_question() or "nothing"
+
+    def resume(self, started_at: str):
         self.started_at = started_at
-        self.conversation.clear()
+
+        dir_path = self._loc()
+        if not os.path.exists(dir_path):
+            return
 
         files = [
             f
@@ -35,6 +58,12 @@ class Store:
             and (f.endswith("user.md") or f.endswith("assistant.md"))
         ]
         files.sort()
+
+        if not files:
+            return
+
+        self.ended_at = os.path.basename(files[-1]).split(".")[0]
+        self.conversation.clear()
 
         for filename in files:
             file_path = os.path.join(dir_path, filename)
@@ -46,6 +75,13 @@ class Store:
             except Exception:
                 continue
 
+    def __str__(self):
+        return f"**{self.started_at}** ~ **{self.ended_at}**: {self.sum_or_quest()}"
+
+    def _loc(self) -> str:
+        return os.path.join(base_dir, self.started_at)
+
+
 def _now_str() -> str:
     return datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
 
@@ -54,33 +90,19 @@ def history() -> str:
     if not os.path.exists(base_dir):
         return "No history found."
 
-    subdirs = []
-    for item in os.listdir(base_dir):
-        item_path = os.path.join(base_dir, item)
-        if os.path.isdir(item_path):
-            subdirs.append(item)
+    def resume(started_at: str) -> Store:
+        store = Store()
+        store.resume(started_at)
+        return store
 
-    subdirs.sort(reverse=True)
+    stores = [
+        resume(item)
+        for item in os.listdir(base_dir)
+        if os.path.isdir(os.path.join(base_dir, item))
+    ]
 
-    markdown_list = []
-    for subdir in subdirs:
-        subdir_path = os.path.join(base_dir, subdir)
-        files = [
-            f
-            for f in os.listdir(subdir_path)
-            if os.path.isfile(os.path.join(subdir_path, f))
-        ]
+    stores.sort(key=lambda s: s.ended_at, reverse=True)
 
-        if files:
-            files.sort()
-            first_file = files[0]
-            file_path = os.path.join(subdir_path, first_file)
+    items = [f"- {store}" for store in stores]
 
-            try:
-                with open(file_path, "r") as f:
-                    content = f.read().strip()
-                    markdown_list.append(f"- **{subdir}**: {content}")
-            except Exception as e:
-                markdown_list.append(f"- **{subdir}**: [Error reading file: {e}]")
-
-    return "\n".join(markdown_list) if markdown_list else "No history found."
+    return "\n".join(items) if items else "No history found."
