@@ -45,8 +45,8 @@ class CLI:
 
                 # handle chat
                 self.store.log("user", user_input)
-                chunked_output = self.client.stream_response(self.store.conversation)
-                whole_output = render(chunked_output)
+                chunked_content, _ = self.client.stream_response(self.store.conversation)
+                whole_output = render(chunked_content)
                 self.store.log("assistant", whole_output)
             except Exception as e:
                 print(f"Error: {e}")

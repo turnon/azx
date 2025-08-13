@@ -1,3 +1,5 @@
+from itertools import tee
+
 from openai import OpenAI
 
 
@@ -16,8 +18,17 @@ class Client:
             stream=True,
         )
 
+        stream1, stream2 = tee(stream)
+
         return (
-            chunk.choices[0].delta.content
-            for chunk in stream
-            if chunk.choices[0].delta.content
+            (
+                chunk.choices[0].delta.content
+                for chunk in stream1
+                if chunk.choices[0].delta.content
+            ),
+            (
+                chunk.choices[0].delta.tool_calls
+                for chunk in stream2
+                if chunk.choices[0].delta.tool_calls
+            ),
         )
