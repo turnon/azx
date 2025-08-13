@@ -6,7 +6,8 @@ base_dir = os.path.expanduser("~/.azx")
 
 class Store:
     def __init__(self):
-        self.started_at = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
+        self.started_at = _now_str()
+        self.ended_at = self.started_at
         self.conversation = []
 
     def log(self, role: str, msg: str):
@@ -15,8 +16,8 @@ class Store:
         session_dir = os.path.join(base_dir, self.started_at)
         os.makedirs(session_dir, exist_ok=True)
 
-        now = datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
-        with open(os.path.join(session_dir, f"{now}_{role}.md"), "w") as f:
+        self.ended_at = _now_str()
+        with open(os.path.join(session_dir, f"{self.ended_at}.{role}.md"), "w") as f:
             f.write(msg)
 
     def resume(self, started_at: str):
@@ -31,7 +32,7 @@ class Store:
             f
             for f in os.listdir(dir_path)
             if os.path.isfile(os.path.join(dir_path, f))
-            and (f.endswith("user.md") or f.endswith("ai.md"))
+            and (f.endswith("user.md") or f.endswith("assistant.md"))
         ]
         files.sort()
 
@@ -44,6 +45,9 @@ class Store:
                     self.conversation.append({"role": role, "content": content})
             except Exception:
                 continue
+
+def _now_str() -> str:
+    return datetime.datetime.now().strftime("%Y_%m%d_%H%M%S")
 
 
 def history() -> str:
