@@ -1,5 +1,4 @@
 from openai import OpenAI
-from renderer import render
 
 
 class Client:
@@ -17,11 +16,8 @@ class Client:
             stream=True,
         )
 
-        chunked_content = (
+        return (
             chunk.choices[0].delta.content
             for chunk in stream
             if chunk.choices[0].delta.content
         )
-
-        full_response = render(chunked_content)
-        return full_response

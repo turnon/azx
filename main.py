@@ -31,6 +31,8 @@ def main():
     while True:
         try:
             user_input = session.prompt()
+
+            # handle command
             user_cmd = user_input.lower()
             if user_cmd in ("\q", "\quit"):
                 break
@@ -52,10 +54,11 @@ def main():
                     print(f"Client '{name}' not found in config")
                 continue
 
+            # handle chat
             store.log("user", user_input)
-
-            response = client.stream_response(store.conversation)
-            store.log("assistant", response)
+            chunked_output = client.stream_response(store.conversation)
+            whole_output = render(chunked_output)
+            store.log("assistant", whole_output)
         except Exception as e:
             print(f"Error: {e}")
 
