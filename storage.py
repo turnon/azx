@@ -10,7 +10,10 @@ class Store:
         self.ended_at = self.started_at
         self.conversation = []
 
-    def log(self, role: str, msg: str):
+    def log(self, role: str, msg: str, flush=True):
+        if not msg:
+            return
+
         self.ended_at = _now_str()
         self.conversation.append({"role": role, "content": msg})
 
@@ -70,7 +73,7 @@ class Store:
             try:
                 with open(file_path, "r") as f:
                     content = f.read().strip()
-                    role = "user" if filename.endswith("user.md") else "assistant"
+                    _, role, _ = filename.split(".")
                     self.conversation.append({"role": role, "content": content})
             except Exception:
                 continue

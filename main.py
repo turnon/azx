@@ -20,10 +20,7 @@ def main():
     client = Client(**client_cfg)
 
     store = Store()
-
-    sys_prompt = config.get("prompt", None)
-    if sys_prompt:
-        store.log("system", sys_prompt)
+    store.log("system", config.get("prompt", None))
 
     if not sys.stdin.isatty():
         content = sys.stdin.read().strip()
@@ -47,6 +44,7 @@ def main():
                             "\? \help",
                             "\c \client",
                             "\h \hist \history",
+                            "\\n \\new",
                             "\\r \\resume",
                             "\s \sum \summary",
                             "\q \quit",
@@ -69,7 +67,12 @@ def main():
             elif user_cmd in ("\h", "\hist", "\history"):
                 render([history()])
                 continue
+            elif user_cmd in ("\\n", "\\new"):
+                store = Store()
+                store.log("system", config.get("prompt", None))
+                continue
             elif match := re.match(r"^(?:\\r|\\resume) (\d{4}_\d{4}_\d{6})$", user_cmd):
+                store = Store()
                 store.resume(match.group(1))
                 continue
             elif user_cmd in ("\s", "\sum", "\summary"):
