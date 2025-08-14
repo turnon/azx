@@ -6,11 +6,23 @@ console = Console()
 
 
 def render(strings) -> str:
-    full_response = ""
+    whole_string = ""
+    last_length = len(whole_string)
+
     with Live(console=console, auto_refresh=False) as live:
-        for string in strings:
-            full_response += string
-            markdown = Markdown(full_response)
+
+        def refresh(content):
+            markdown = Markdown(content)
             live.update(markdown)
             live.refresh()
-    return full_response
+
+        for string in strings:
+            whole_string += string
+            current_length = len(whole_string)
+            if current_length - last_length > 5:
+                refresh(whole_string)
+                last_length = current_length
+
+        refresh(whole_string)
+
+    return whole_string
