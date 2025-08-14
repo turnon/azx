@@ -11,7 +11,7 @@ class Store:
         self.ended_at = self.started_at
         self.conversation = []
 
-    def log(self, role: str, msg: str, flush=True):
+    def log(self, role: str, msg: str):
         if not msg:
             return
 
