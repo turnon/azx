@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 
 base_dir = os.path.expanduser("~/.azx")
 
@@ -102,6 +103,7 @@ def history() -> str:
         resume(item)
         for item in os.listdir(base_dir)
         if os.path.isdir(os.path.join(base_dir, item))
+        and re.match(r"^\d{4}_\d{4}_\d{6}$", item)
     ]
 
     stores.sort(key=lambda s: s.ended_at, reverse=True)
