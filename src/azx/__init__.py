@@ -5,10 +5,10 @@ from pathlib import Path
 
 import yaml
 
-import prompt
-from agents import Client
-from renderer import render
-from storage import Store, history
+from . import prompt
+from .agents import Client
+from .renderer import render
+from .storage import Store, history
 
 
 class CLI:

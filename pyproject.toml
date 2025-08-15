@@ -1,6 +1,6 @@
 [project]
 name = "azx"
-version = "0.1.0"
+version = "0.1.3"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -11,3 +11,6 @@ dependencies = [
     "rich>=14.1.0",
     "socksio>=1.0.0",
 ]
+
+[project.scripts]
+azx = "azx:main"
