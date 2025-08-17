@@ -11,7 +11,7 @@ class Client:
         self.api_key = api_key
         self._client = OpenAI(base_url=base_url, api_key=api_key)
 
-    def stream_response(self, messages: list[str]):
+    def stream_response(self, messages: list[dict]):
         stream = self._client.chat.completions.create(
             model=self.model,
             messages=messages,

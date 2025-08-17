@@ -105,7 +105,8 @@ class CLI:
                     "content": "Summarize all talk above briefly, use single language, which is the primary language involved, with words or phrases, in one line. Your answer could contain verb/object/attribute/adverbial/complement, but no subject. Just give me the answer, no thought is need",
                 }
             )
-            sum = "".join(list(self.client.stream_response(talk)))
+            chunked_sum, _ = self.client.stream_response(talk)
+            sum = "".join(list(chunked_sum))
             self.store.summary(sum)
             render([sum])
             return True
