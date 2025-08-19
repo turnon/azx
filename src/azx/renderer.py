@@ -1,15 +1,16 @@
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.live import Live
+from rich.markdown import Markdown
+from rich.theme import Theme
 
-console = Console()
+console = Console(theme=Theme({"markdown.hr": "medium_purple4"}))
 
 
 def render(strings) -> str:
     whole_string = ""
     last_length = len(whole_string)
 
-    with Live(console=console, auto_refresh=False) as live:
+    with Live(console=console, auto_refresh=False, vertical_overflow="visible") as live:
 
         def refresh(content):
             markdown = Markdown(content)
