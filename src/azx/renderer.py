@@ -17,11 +17,13 @@ def render(strings) -> str:
             live.refresh()
 
         for string in strings:
-            whole_string += string
-            current_length = len(whole_string)
-            if current_length - last_length > 5:
-                refresh(whole_string)
-                last_length = current_length
+            for i, line in enumerate(string.split("\n")):
+                substring = f"\n{line}" if i > 0 else line
+                whole_string += substring
+                current_length = len(whole_string)
+                if current_length - last_length > 5:
+                    refresh(whole_string)
+                    last_length = current_length
 
         refresh(whole_string)
 
