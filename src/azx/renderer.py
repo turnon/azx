@@ -1,3 +1,4 @@
+from markdown_it import MarkdownIt
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -8,24 +9,41 @@ console = Console(theme=Theme({"markdown.hr": "medium_purple4"}))
 
 def render(strings) -> str:
     whole_string = ""
-    last_length = len(whole_string)
+    current_block = ""
 
-    with Live(console=console, auto_refresh=False, vertical_overflow="visible") as live:
-
-        def refresh(content):
-            markdown = Markdown(content)
-            live.update(markdown)
-            live.refresh()
-
+    def flatten_strings():
         for string in strings:
-            for i, line in enumerate(string.split("\n")):
-                substring = f"\n{line}" if i > 0 else line
-                whole_string += substring
-                current_length = len(whole_string)
-                if current_length - last_length > 5:
-                    refresh(whole_string)
-                    last_length = current_length
+            for char in string:
+                yield char
 
-        refresh(whole_string)
+    def block_recognized():
+        nonlocal whole_string
+        md = MarkdownIt("js-default")
+        tokens_len = 0
+        for char in flatten_strings():
+            whole_string += char
+            tokens = md.parse(whole_string)
+            new_block = tokens_len != len(tokens) and whole_string[-3:][:2] == "\n\n"
+            tokens_len = len(tokens)
+            yield (char, new_block)
+
+    def new_live() -> Live:
+        live = Live(console=console, auto_refresh=False)
+        live.start()
+        return live
+
+    live = new_live()
+
+    for char, new_block in block_recognized():
+        if new_block:
+            current_block = ""
+            live.stop()
+            live = new_live()
+
+        current_block += char
+        live.update(Markdown(current_block))
+        live.refresh()
+
+    live.stop()
 
     return whole_string
