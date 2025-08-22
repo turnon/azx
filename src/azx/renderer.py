@@ -17,18 +17,18 @@ def render(strings) -> str:
                 yield char
 
     def block_recognized():
-        nonlocal whole_string
+        nonlocal current_block
         md = MarkdownIt("js-default")
         tokens_len = 0
         for char in flatten_strings():
-            whole_string += char
-            tokens = md.parse(whole_string)
-            new_block = tokens_len != len(tokens) and whole_string[-3:][:2] == "\n\n"
+            current_block += char
+            tokens = md.parse(current_block)
+            new_block = tokens_len != len(tokens) and current_block[-3:][:2] == "\n\n"
             tokens_len = len(tokens)
             yield (char, new_block)
 
     def new_live() -> Live:
-        live = Live(console=console, auto_refresh=False)
+        live = Live(console=console, refresh_per_second=25)
         live.start()
         return live
 
@@ -36,13 +36,12 @@ def render(strings) -> str:
 
     for char, new_block in block_recognized():
         if new_block:
-            current_block = ""
+            current_block = char
             live.stop()
             live = new_live()
 
-        current_block += char
+        whole_string += char
         live.update(Markdown(current_block))
-        live.refresh()
 
     live.stop()
 
