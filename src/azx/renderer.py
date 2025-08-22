@@ -23,7 +23,11 @@ def render(strings) -> str:
         for char in flatten_strings():
             current_block += char
             tokens = md.parse(current_block)
-            new_block = tokens_len != len(tokens) and current_block[-3:][:2] == "\n\n"
+            new_block = (
+                tokens_len != len(tokens)
+                and current_block[-3:][:2] == "\n\n"
+                and char not in "-*123456789|"
+            )
             tokens_len = len(tokens)
             yield (char, new_block)
 
@@ -38,6 +42,7 @@ def render(strings) -> str:
         if new_block:
             current_block = char
             live.stop()
+            console.print("")
             live = new_live()
 
         whole_string += char
