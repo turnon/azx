@@ -1,5 +1,4 @@
 import re
-import sys
 import traceback
 from pathlib import Path
 
@@ -21,12 +20,6 @@ class CLI:
 
         self.store = Store()
         self.store.log("system", self.config.get("prompt", None))
-
-        if not sys.stdin.isatty():
-            content = sys.stdin.read().strip()
-            if content:
-                self.store.log("user", content)
-                sys.stdin = open("/dev/tty")
 
         self.session = prompt.session()
 
