@@ -17,11 +17,8 @@ class CLI:
             self.config = yaml.safe_load(f)
 
         self.client = Client(**self.config["keys"][0])
-
-        self.store = Store()
-        self.store.log("system", self.config.get("prompt", None))
-
         self.session = prompt.session()
+        self.store = None
 
     def run(self):
         while True:
@@ -35,6 +32,10 @@ class CLI:
 
                 if self._other_command(user_cmd):
                     continue
+
+                if self.store is None:
+                    self.store = Store()
+                    self.store.log("system", self.config.get("prompt", None))
 
                 # handle chat
                 self.store.log("user", user_input)
@@ -81,8 +82,7 @@ class CLI:
             return True
 
         if user_cmd in ("/n", "/new"):
-            self.store = Store()
-            self.store.log("system", self.config.get("prompt", None))
+            self.store = None
             return True
 
         if match := re.match(r"^(?:/r|/resume) (\d{4}_\d{4}_\d{6})$", user_cmd):
