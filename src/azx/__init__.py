@@ -26,7 +26,7 @@ class CLI:
                 user_input = self.session.prompt()
 
                 # handle command
-                user_cmd = user_input.lower()
+                user_cmd = user_input.strip().lower()
                 if user_cmd in ("/q", "/quit"):
                     break
 
@@ -65,14 +65,27 @@ class CLI:
             render_md_stream([manual])
             return True
 
+        if match := re.match(r"^(?:/c|/client)$", user_cmd):
+            render_md_stream(
+                "\n".join(
+                    [f"{i + 1}. {k['name']}" for i, k in enumerate(self.config["keys"])]
+                )
+            )
+            return True
+
         if match := re.match(r"^(?:/c|/client) (.+)$", user_cmd):
             name = match.group(1)
             client2_cfg = next(
-                (k for k in self.config["keys"] if k["name"] == name), None
+                (
+                    k
+                    for i, k in enumerate(self.config["keys"])
+                    if k["name"] == name or str(i) == name
+                ),
+                None,
             )
             if client2_cfg:
                 self.client = Client(**client2_cfg)
-                print(f"Switched to client: {name}")
+                print(f"Switched to client: {client2_cfg['name']}")
             else:
                 print(f"Client '{name}' not found in config")
             return True
