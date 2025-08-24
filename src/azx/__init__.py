@@ -6,7 +6,7 @@ import yaml
 
 from . import prompt
 from .agents import Client
-from .renderer import render_md_stream, render_user_input
+from .renderer import render_md_full, render_md_stream, render_user_input
 from .storage import Store, history
 
 
@@ -47,29 +47,11 @@ class CLI:
                 traceback.print_exc()
 
     def _other_command(self, user_cmd):
-        if user_cmd in ("/?", "/help"):
-            manual = "\n".join(
-                [
-                    f"- {cmd}"
-                    for cmd in [
-                        "/? /help",
-                        "/c /client",
-                        "/n /new",
-                        "/r /resume",
-                        "/s /sum /summary",
-                        "/q /quit",
-                    ]
-                ]
-            )
-            render_md_stream([manual])
-            return True
-
         if match := re.match(r"^(?:/c|/client)$", user_cmd):
-            render_md_stream(
-                "\n".join(
-                    [f"{i + 1}. {k['name']}" for i, k in enumerate(self.config["keys"])]
-                )
+            clients = "\n".join(
+                [f"{i + 1}. {k['name']}" for i, k in enumerate(self.config["keys"])]
             )
+            render_md_full(f"clients:\n{clients}")
             return True
 
         if match := re.match(r"^(?:/c|/client) (.+)$", user_cmd):
@@ -94,7 +76,7 @@ class CLI:
             return True
 
         if match := re.match(r"^(?:/r|/resume)$", user_cmd):
-            render_md_stream([history()])
+            render_md_full(f"history:\n{history()}")
             return True
 
         if match := re.match(r"^(?:/r|/resume) (.+)$", user_cmd):
@@ -124,6 +106,23 @@ class CLI:
             sum = "".join(list(chunked_sum))
             self.store.summary(sum)
             render_md_stream([sum])
+            return True
+
+        if user_cmd in ("/?", "/help") or re.match(r"^/[a-zA-Z0-9]+$", user_cmd):
+            manual = "\n".join(
+                [
+                    f"- {cmd}"
+                    for cmd in [
+                        "/? /help",
+                        "/c /client",
+                        "/n /new",
+                        "/r /resume",
+                        "/s /sum /summary",
+                        "/q /quit",
+                    ]
+                ],
+            )
+            render_md_full(f"commands:\n{manual}")
             return True
 
         return False

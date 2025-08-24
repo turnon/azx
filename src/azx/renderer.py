@@ -14,6 +14,10 @@ def render_user_input(string):
     console.print(text)
 
 
+def render_md_full(string):
+    console.print(Markdown(string))
+
+
 def render_md_stream(strings) -> str:
     whole_string = ""
     current_block = ""
