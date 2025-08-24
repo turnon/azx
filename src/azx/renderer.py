@@ -2,12 +2,19 @@ from markdown_it import MarkdownIt
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
+from rich.text import Text
 from rich.theme import Theme
 
 console = Console(theme=Theme({"markdown.hr": "medium_purple4"}))
 
 
-def render(strings) -> str:
+def render_user_input(string):
+    text = Text(f">>> {string}\n")
+    text.stylize("green")
+    console.print(text)
+
+
+def render_md_stream(strings) -> str:
     whole_string = ""
     current_block = ""
 

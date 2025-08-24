@@ -6,7 +6,7 @@ import yaml
 
 from . import prompt
 from .agents import Client
-from .renderer import render
+from .renderer import render_md_stream, render_user_input
 from .storage import Store, history
 
 
@@ -40,7 +40,7 @@ class CLI:
                 # handle chat
                 self.store.log("user", user_input)
                 chunked_content, _ = self.client.stream_response(self.store.conversation)
-                whole_output = render(chunked_content)
+                whole_output = render_md_stream(chunked_content)
                 self.store.log("assistant", whole_output)
             except Exception as e:
                 print(f"Error: {e}")
@@ -62,7 +62,7 @@ class CLI:
                     ]
                 ]
             )
-            render([manual])
+            render_md_stream([manual])
             return True
 
         if match := re.match(r"^(?:/c|/client) (.+)$", user_cmd):
@@ -78,7 +78,7 @@ class CLI:
             return True
 
         if user_cmd in ("/h", "/hist", "/history"):
-            render([history()])
+            render_md_stream([history()])
             return True
 
         if user_cmd in ("/n", "/new"):
@@ -88,6 +88,13 @@ class CLI:
         if match := re.match(r"^(?:/r|/resume) (\d{4}_\d{4}_\d{6})$", user_cmd):
             self.store = Store()
             self.store.resume(match.group(1))
+            for msg in self.store.conversation:
+                render_method = (
+                    render_md_stream
+                    if msg["role"] == "assistant"
+                    else render_user_input
+                )
+                render_method(msg["content"])
             return True
 
         if user_cmd in ("/s", "/sum", "/summary"):
@@ -101,7 +108,7 @@ class CLI:
             chunked_sum, _ = self.client.stream_response(talk)
             sum = "".join(list(chunked_sum))
             self.store.summary(sum)
-            render([sum])
+            render_md_stream([sum])
             return True
 
         return False
