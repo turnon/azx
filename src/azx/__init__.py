@@ -78,7 +78,7 @@ class CLI:
                 (
                     k
                     for i, k in enumerate(self.config["keys"])
-                    if k["name"] == name or str(i) == name
+                    if k["name"] == name or str(i + 1) == name
                 ),
                 None,
             )
