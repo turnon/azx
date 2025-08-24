@@ -54,7 +54,6 @@ class CLI:
                     for cmd in [
                         "/? /help",
                         "/c /client",
-                        "/h /hist /history",
                         "/n /new",
                         "/r /resume",
                         "/s /sum /summary",
@@ -90,17 +89,20 @@ class CLI:
                 print(f"Client '{name}' not found in config")
             return True
 
-        if user_cmd in ("/h", "/hist", "/history"):
-            render_md_stream([history()])
-            return True
-
         if user_cmd in ("/n", "/new"):
             self.store = None
             return True
 
-        if match := re.match(r"^(?:/r|/resume) (\d{4}_\d{4}_\d{6})$", user_cmd):
+        if match := re.match(r"^(?:/r|/resume)$", user_cmd):
+            render_md_stream([history()])
+            return True
+
+        if match := re.match(r"^(?:/r|/resume) (.+)$", user_cmd):
+            started_at = (
+                history().split("\n")[int(match.group(1)) - 1].split(" ")[1].strip("*")
+            )
             self.store = Store()
-            self.store.resume(match.group(1))
+            self.store.resume(started_at)
             for msg in self.store.conversation:
                 render_method = (
                     render_md_stream

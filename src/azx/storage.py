@@ -108,6 +108,6 @@ def history() -> str:
 
     stores.sort(key=lambda s: s.ended_at, reverse=True)
 
-    items = [f"- {store}" for store in stores]
+    items = [f"{i + 1}. {store}" for i, store in enumerate(stores)]
 
     return "\n".join(items) if items else "No history found."
