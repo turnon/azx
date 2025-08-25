@@ -9,7 +9,7 @@ console = Console(theme=Theme({"markdown.hr": "medium_purple4"}))
 
 
 def render_user_input(string):
-    text = Text(f">>> {string}\n")
+    text = Text(f">>> {string}")
     text.stylize("green")
     console.print(text)
 

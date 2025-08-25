@@ -33,11 +33,11 @@ class CLI:
                 if self._other_command(user_cmd):
                     continue
 
+                # handle chat
                 if self.store is None:
                     self.store = Store()
                     self.store.log("system", self.config.get("prompt", None))
 
-                # handle chat
                 self.store.log("user", user_input)
                 chunked_content, _ = self.client.stream_response(self.store.conversation)
                 whole_output = render_md_stream(chunked_content)
