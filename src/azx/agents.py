@@ -16,11 +16,11 @@ _mime_types = {
 }
 
 _ocr_prompt = """
-Extract content from image. It may has lists, tables, code.
+Extract content from image.
 
-Your answer should be a json, containing abstract and full text like `{"abs": "xxxx", "full": "xxxx"}`.
+Your answer should be a json, containing abstract and full text in such struct: `{"abstract": "xxxx", "full": "xxxx"}`.
 
-The full text should be in markdown syntax.
+The full text should be in markdown syntax. It may has lists, tables, code.
 
 If something looks like list in full text, represent it with legal markdown list syntax.
 """.strip()

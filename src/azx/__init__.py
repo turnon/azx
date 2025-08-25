@@ -38,7 +38,9 @@ class Chat:
                     self.store.log("system", config.default_chat_prompt())
 
                 self.store.log("user", user_input)
-                chunked_content, _ = self.client.stream_response(self.store.conversation)
+                chunked_content, _ = self.client.stream_response(
+                    self.store.conversation
+                )
                 whole_output = render_md_stream(chunked_content)
                 self.store.log("assistant", whole_output)
             except Exception as e:
@@ -118,20 +120,31 @@ class Chat:
 
 
 def ocr():
-    client = Client(**config.default_cli_ocr_model())
+    model_cfg = config.find_model(args.model) if args.model else config.default_cli_ocr_model()
+    client = Client(**model_cfg)
+    result = None
 
     try:
         result = client.ocr(args.files[0])
-        if args.md:
-            js = json.loads(result)
-            return render_md_full(f"{js['abs']}\n\n{js['full']}")
-        print(result)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Fail to OCR: {e}")
         traceback.print_exc()
+
+    if args.md:
+        try:
+            js = json.loads(result)
+            return render_md_full(f"{js['abstract']}\n\n{js['full']}")
+        except Exception as e:
+            print(f"Fail to parse as json: {e}\n\n{result}")
+            traceback.print_exc()
+
+    print(result)
 
 
 def main():
+    if args.models:
+        return render_md_full(f"clients:\n{config.models()}")
+
     if args.ocr:
         if not args.files:
             print("Error: --ocr-md or --ocr-json requires a file path argument")
