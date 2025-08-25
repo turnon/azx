@@ -1,6 +1,29 @@
+import base64
+import os
 from itertools import tee
+from pathlib import Path
 
 from openai import OpenAI
+
+_mime_types = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".bmp": "image/bmp",
+    ".tiff": "image/tiff",
+}
+
+_ocr_prompt = """
+Extract content from image. It may has lists, tables, code.
+
+Your answer should be a json, containing abstract and full text like `{"abs": "xxxx", "full": "xxxx"}`.
+
+The full text should be in markdown syntax.
+
+If something looks like list in full text, represent it with legal markdown list syntax.
+""".strip()
 
 
 class Client:
@@ -32,3 +55,31 @@ class Client:
                 if chunk.choices[0].delta.tool_calls
             ),
         )
+
+    def ocr(self, uri, prompt=_ocr_prompt) -> str:
+        if os.path.exists(uri):
+            with open(uri, "rb") as image_file:
+                base64_data = base64.b64encode(image_file.read()).decode("utf-8")
+                mime_type = _mime_types.get(Path(uri).suffix.lower(), "image/jpeg")
+                uri = f"data:{mime_type};base64,{base64_data}"
+
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": uri},
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
+
+        response = self._client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            response_format={"type": "json_object"},
+        )
+
+        return response.choices[0].message.content

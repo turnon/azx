@@ -1,22 +1,21 @@
+import json
 import re
 import traceback
-from pathlib import Path
-
-import yaml
 
 from . import prompt
+from . import arguments
 from .agents import Client
+from .configure import Configure
 from .renderer import render_md_full, render_md_stream, render_user_input
 from .storage import Store, history
 
+config = Configure()
+args = arguments.parse()
 
-class CLI:
+
+class Chat:
     def __init__(self):
-        config_path = Path.home() / ".azx" / "config.yaml"
-        with open(config_path) as f:
-            self.config = yaml.safe_load(f)
-
-        self.client = Client(**self.config["keys"][0])
+        self.client = Client(**config.default_chat_model())
         self.session = prompt.session()
         self.store = None
 
@@ -36,7 +35,7 @@ class CLI:
                 # handle chat
                 if self.store is None:
                     self.store = Store()
-                    self.store.log("system", self.config.get("prompt", None))
+                    self.store.log("system", config.default_chat_prompt())
 
                 self.store.log("user", user_input)
                 chunked_content, _ = self.client.stream_response(self.store.conversation)
@@ -48,22 +47,12 @@ class CLI:
 
     def _other_command(self, user_cmd):
         if match := re.match(r"^(?:/c|/client)$", user_cmd):
-            clients = "\n".join(
-                [f"{i + 1}. {k['name']}" for i, k in enumerate(self.config["keys"])]
-            )
-            render_md_full(f"clients:\n{clients}")
+            render_md_full(f"clients:\n{config.models()}")
             return True
 
         if match := re.match(r"^(?:/c|/client) (.+)$", user_cmd):
             name = match.group(1)
-            client2_cfg = next(
-                (
-                    k
-                    for i, k in enumerate(self.config["keys"])
-                    if k["name"] == name or str(i + 1) == name
-                ),
-                None,
-            )
+            client2_cfg = config.find_model(name)
             if client2_cfg:
                 self.client = Client(**client2_cfg)
                 print(f"Switched to client: {client2_cfg['name']}")
@@ -128,8 +117,28 @@ class CLI:
         return False
 
 
+def ocr():
+    client = Client(**config.default_cli_ocr_model())
+
+    try:
+        result = client.ocr(args.files[0])
+        if args.md:
+            js = json.loads(result)
+            return render_md_full(f"{js['abs']}\n\n{js['full']}")
+        print(result)
+    except Exception as e:
+        print(f"Error: {e}")
+        traceback.print_exc()
+
+
 def main():
-    CLI().run()
+    if args.ocr:
+        if not args.files:
+            print("Error: --ocr-md or --ocr-json requires a file path argument")
+            return
+        return ocr()
+
+    Chat().run()
 
 
 if __name__ == "__main__":
