@@ -120,7 +120,9 @@ class Chat:
 
 
 def ocr():
-    model_cfg = config.find_model(args.model) if args.model else config.default_cli_ocr_model()
+    model_cfg = (
+        config.find_model(args.model) if args.model else config.default_cli_ocr_model()
+    )
     client = Client(**model_cfg)
     result = None
 
@@ -130,15 +132,12 @@ def ocr():
         print(f"Fail to OCR: {e}")
         traceback.print_exc()
 
-    if args.md:
-        try:
-            js = json.loads(result)
-            return render_md_full(f"{js['abstract']}\n\n{js['full']}")
-        except Exception as e:
-            print(f"Fail to parse as json: {e}\n\n{result}")
-            traceback.print_exc()
-
-    print(result)
+    try:
+        js = json.loads(result)
+        print(f"{js['abstract']}\n\n{js['full']}")
+    except Exception as e:
+        print(f"Fail to parse as json: {e}\n\n{result}")
+        traceback.print_exc()
 
 
 def main():
