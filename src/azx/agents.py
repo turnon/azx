@@ -5,6 +5,7 @@ from itertools import tee
 from pathlib import Path
 
 from openai import OpenAI
+import requests
 
 _mime_types = {
     ".jpg": "image/jpeg",
@@ -31,24 +32,66 @@ tools = [
         "type": "function",
         "function": {
             "name": "search_wiki",
-            "description": "Get detail info from wikipedia",
+            "description": "Search on wikipedia to get synonyms or similar terms. Should be used before query_wiki",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "keyword": {
                         "type": "string",
-                        "description": "keyword to search wikipedia, would be a single word or a phrase",
+                        "description": "keyword to search wikipedia, would be a single word",
                     },
                 },
                 "required": ["keyword"],
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_wiki",
+            "description": "Query on wikipedia with specific title. Can be used after search_wiki",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "wikipedia title",
+                    },
+                },
+                "required": ["title"],
+            },
+        },
+    },
 ]
 
-
 def search_wiki(keyword):
-    return f"There is no {keyword}"
+    url = "https://en.wikipedia.org/w/api.php"
+    params = {"action": "opensearch", "format": "json", "search": keyword, "limit": 10}
+    headers = {"User-Agent": "MyApp/1.0 (your.email@example.com)"}
+    response = requests.get(url, params=params, headers=headers)
+    return json.dumps({"candidates": response.json()[1]})
+
+
+def query_wiki(title):
+    result = ""
+    url = "https://en.wikipedia.org/w/api.php"
+    params = {
+        "action": "query",
+        "format": "json",
+        "titles": title,
+        "prop": "extracts",
+        "explaintext": True,
+    }
+    headers = {"User-Agent": "MyApp/1.0 (your.email@example.com)"}
+    response = requests.get(url, params=params, headers=headers)
+    data = response.json()
+    pages = data["query"]["pages"]
+    for page in pages.values():
+        if "extract" in page:
+            result += page["extract"]
+            result += "\n\n"
+
+    return result
 
 
 class ToolCalls:
@@ -66,6 +109,8 @@ class ToolCalls:
             compact_args = json.dumps(params)
             if name == "search_wiki":
                 yield (id, name, compact_args, search_wiki(**params))
+            if name == "query_wiki":
+                yield (id, name, compact_args, query_wiki(**params))
 
     def __str__(self) -> str:
         self._consume()
