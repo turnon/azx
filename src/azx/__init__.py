@@ -6,7 +6,12 @@ from . import prompt
 from . import arguments
 from .agents import Client
 from .configure import Configure
-from .renderer import render_md_full, render_md_stream, render_user_input
+from .renderer import (
+    render_md_full,
+    render_md_stream,
+    render_tool_call,
+    render_user_input,
+)
 from .storage import Store, history
 
 config = Configure()
@@ -38,11 +43,19 @@ class Chat:
                     self.store.log("system", config.default_chat_prompt())
 
                 self.store.log("user", user_input)
-                chunked_content, _ = self.client.stream_response(
-                    self.store.conversation
-                )
-                whole_output = render_md_stream(chunked_content)
-                self.store.log("assistant", whole_output)
+
+                while True:
+                    content, tools = self.client.stream_response(
+                        self.store.conversation
+                    )
+                    whole_output = render_md_stream(content)
+                    self.store.log("assistant", whole_output)
+                    for id, name, args, ret in tools:
+                        render_tool_call(f"{name}({args})")
+                        self.store.tool(id, name, args, ret)
+                    if not tools:
+                        break
+
             except Exception as e:
                 print(f"Error: {e}")
                 traceback.print_exc()
@@ -77,12 +90,12 @@ class Chat:
             self.store = Store()
             self.store.resume(started_at)
             for msg in self.store.conversation:
-                render_method = (
-                    render_md_stream
-                    if msg["role"] == "assistant"
-                    else render_user_input
-                )
-                render_method(msg["content"])
+                if msg["role"] == "user":
+                    render_user_input(msg["content"])
+                elif msg["role"] == "assistant":
+                    render_md_stream(msg["content"])
+                    for fn in msg.get("tool_calls", []):
+                        render_tool_call(f"{fn['function']['name']}({fn['function']['arguments']})")
             return True
 
         if user_cmd in ("/s", "/sum", "/summary"):

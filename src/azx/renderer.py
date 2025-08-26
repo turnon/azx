@@ -13,6 +13,10 @@ def render_user_input(string):
     text.stylize("green")
     console.print(text)
 
+def render_tool_call(string):
+    text = Text(f"{string}...")
+    text.stylize("bright_black")
+    console.print(text)
 
 def render_md_full(string):
     console.print(Markdown(string))
