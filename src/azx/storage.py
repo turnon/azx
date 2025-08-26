@@ -11,10 +11,23 @@ class Store:
         self.ended_at = self.started_at
         self.conversation = []
 
-    def log(self, role: str, msg: str):
-        if not msg:
-            return
+    def tool(self, id, name, args, ret):
+        self._add_tool_to_last_assistant_msg(id, name, args)
+        self.ended_at = _now_str()
+        self.conversation.append(
+            {
+                "role": "tool",
+                "tool_call_id": id,
+                "name": name,
+                "content": ret,
+            }
+        )
 
+        os.makedirs(self._loc(), exist_ok=True)
+        with open(os.path.join(self._loc(), f"{self.ended_at}.tool.md"), "w") as f:
+            f.write("\n".join([id, name, args, ret]))
+
+    def log(self, role: str, msg: str):
         self.ended_at = _now_str()
         self.conversation.append({"role": role, "content": msg})
 
@@ -59,7 +72,11 @@ class Store:
             f
             for f in os.listdir(dir_path)
             if os.path.isfile(os.path.join(dir_path, f))
-            and (f.endswith("user.md") or f.endswith("assistant.md"))
+            and (
+                f.endswith("user.md")
+                or f.endswith("assistant.md")
+                or f.endswith("tool.md")
+            )
         ]
         files.sort()
 
@@ -73,9 +90,25 @@ class Store:
             file_path = os.path.join(dir_path, filename)
             try:
                 with open(file_path, "r") as f:
-                    content = f.read().strip()
                     _, role, _ = filename.split(".")
-                    self.conversation.append({"role": role, "content": content})
+                    if role == "tool":
+                        fn_id = f.readline().strip()
+                        fn_name = f.readline().strip()
+                        fn_args = f.readline().strip()
+                        fn_ret = f.read().strip()
+                        self._add_tool_to_last_assistant_msg(fn_id, fn_name, fn_args)
+                        self.conversation.append(
+                            {
+                                "role": role,
+                                "tool_call_id": fn_id,
+                                "name": fn_name,
+                                "content": fn_ret,
+                            }
+                        )
+                    else:
+                        self.conversation.append(
+                            {"role": role, "content": f.read().strip()}
+                        )
             except Exception:
                 continue
 
@@ -84,6 +117,23 @@ class Store:
 
     def _loc(self) -> str:
         return os.path.join(base_dir, self.started_at)
+
+    def _add_tool_to_last_assistant_msg(self, id, name, args):
+        last_msg = next(
+            (msg for msg in reversed(self.conversation) if msg["role"] == "assistant"),
+            None,
+        )
+
+        if "tool_calls" not in last_msg:
+            last_msg["tool_calls"] = []
+
+        last_msg["tool_calls"].append(
+            {
+                "id": id,
+                "type": "function",
+                "function": {"name": name, "arguments": args},
+            }
+        )
 
 
 def _now_str() -> str:
