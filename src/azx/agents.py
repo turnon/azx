@@ -1,11 +1,14 @@
 import base64
 import json
 import os
+import tempfile
 from itertools import tee
 from pathlib import Path
 
-from openai import OpenAI
 import requests
+from markitdown import MarkItDown
+from openai import OpenAI
+
 
 _mime_types = {
     ".jpg": "image/jpeg",
@@ -32,66 +35,58 @@ tools = [
         "type": "function",
         "function": {
             "name": "search_wiki",
-            "description": "Search on wikipedia to get synonyms or similar terms. Should be used before query_wiki",
+            "description": "Search on wikipedia to get detail info",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "keyword": {
                         "type": "string",
-                        "description": "keyword to search wikipedia, would be a single word",
+                        "description": "keyword to search wikipedia",
                     },
                 },
                 "required": ["keyword"],
             },
         },
     },
-    {
-        "type": "function",
-        "function": {
-            "name": "query_wiki",
-            "description": "Query on wikipedia with specific title. Can be used after search_wiki",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "wikipedia title",
-                    },
-                },
-                "required": ["title"],
-            },
-        },
-    },
 ]
 
+
 def search_wiki(keyword):
+    text = ""
+    md = MarkItDown()
     url = "https://en.wikipedia.org/w/api.php"
-    params = {"action": "opensearch", "format": "json", "search": keyword, "limit": 10}
     headers = {"User-Agent": "MyApp/1.0 (your.email@example.com)"}
-    response = requests.get(url, params=params, headers=headers)
-    return json.dumps({"candidates": response.json()[1]})
 
-
-def query_wiki(title):
-    result = ""
-    url = "https://en.wikipedia.org/w/api.php"
-    params = {
-        "action": "query",
+    keyword_params = {
+        "action": "opensearch",
         "format": "json",
-        "titles": title,
-        "prop": "extracts",
-        "explaintext": True,
+        "search": keyword,
+        "limit": 10,
     }
-    headers = {"User-Agent": "MyApp/1.0 (your.email@example.com)"}
-    response = requests.get(url, params=params, headers=headers)
-    data = response.json()
-    pages = data["query"]["pages"]
-    for page in pages.values():
-        if "extract" in page:
-            result += page["extract"]
-            result += "\n\n"
+    keyword_resp = requests.get(url, params=keyword_params, headers=headers)
 
-    return result
+    for syn in keyword_resp.json()[1]:
+        title_args = {
+            "action": "query",
+            "format": "json",
+            "titles": syn,
+            "prop": "extracts",
+        }
+        title_resp = requests.get(url, params=title_args, headers=headers)
+        data = title_resp.json()
+        pages = data["query"]["pages"]
+        for page in pages.values():
+            if "extract" in page:
+                text += f"# {syn}\n\n"
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".html", delete=False, encoding="utf-8"
+                ) as temp_file:
+                    temp_file.write(page["extract"])
+                    temp_file_path = temp_file.name
+                md.convert(temp_file_path).text_content
+                text += md.convert(temp_file_path).text_content
+                text += "\n\n"
+    return text
 
 
 class ToolCalls:
