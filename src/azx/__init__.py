@@ -50,9 +50,9 @@ class Chat:
                     )
                     whole_output = render_md_stream(content)
                     self.store.log("assistant", whole_output)
-                    for id, name, args, ret in tools:
-                        render_tool_call(f"{name}({args})")
-                        self.store.tool(id, name, args, ret)
+                    for t in tools:
+                        render_tool_call(f"{t.fn_str()}({t.params_str()})")
+                        self.store.tool(t.id, t.fn_str(), t.params_str(), t.exec())
                     if not tools:
                         break
 
@@ -95,7 +95,9 @@ class Chat:
                 elif msg["role"] == "assistant":
                     render_md_stream(msg["content"])
                     for fn in msg.get("tool_calls", []):
-                        render_tool_call(f"{fn['function']['name']}({fn['function']['arguments']})")
+                        render_tool_call(
+                            f"{fn['function']['name']}({fn['function']['arguments']})"
+                        )
             return True
 
         if user_cmd in ("/s", "/sum", "/summary"):

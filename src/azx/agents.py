@@ -111,6 +111,27 @@ def search_wiki(keyword) -> str:
     return "\n\n---\n\n".join(md_pages)
 
 
+class ToolCall:
+    def __init__(self, id, fn, params):
+        self.id = id
+        self.fn = fn
+        self.params = params
+
+    def fn_str(self) -> str:
+        return self.fn.__name__
+
+    def params_str(self) -> str:
+        return str(
+            {
+                name: val if len(val) <= 9 else f"{val[:3]}...{val[-3:]}"
+                for name, val in self.params.items()
+            }
+        )
+
+    def exec(self) -> str:
+        return self.fn(**self.params)
+
+
 class ToolCalls:
     def __init__(self, stream):
         self.stream = stream
@@ -123,11 +144,10 @@ class ToolCalls:
     def __iter__(self):
         for id, name, args in self._func_args():
             params = json.loads(args)
-            compact_args = json.dumps(params)
             if name == "search_wiki":
-                yield (id, name, compact_args, search_wiki(**params))
+                yield ToolCall(id, search_wiki, params)
             if name == "read_data":
-                yield (id, name, compact_args, read_data(**params))
+                yield ToolCall(id, read_data, params)
 
     def __str__(self) -> str:
         self._consume()
