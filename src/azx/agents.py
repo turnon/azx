@@ -48,11 +48,32 @@ tools = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_data",
+            "description": "Read data from local file path",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "uri": {
+                        "type": "string",
+                        "description": "local file path",
+                    },
+                },
+                "required": ["uri"],
+            },
+        },
+    },
 ]
 
 
-def search_wiki(keyword):
-    text = ""
+def read_data(uri) -> str:
+    return MarkItDown().convert(uri).text_content
+
+
+def search_wiki(keyword) -> str:
+    md_pages = []
     md = MarkItDown()
     url = "https://en.wikipedia.org/w/api.php"
     headers = {"User-Agent": "MyApp/1.0 (your.email@example.com)"}
@@ -77,7 +98,7 @@ def search_wiki(keyword):
         pages = data["query"]["pages"]
         for page in pages.values():
             if "extract" in page:
-                text += f"# {syn}\n\n"
+                text = f"# {syn}\n\n"
                 with tempfile.NamedTemporaryFile(
                     mode="w", suffix=".html", delete=False, encoding="utf-8"
                 ) as temp_file:
@@ -85,8 +106,9 @@ def search_wiki(keyword):
                     temp_file_path = temp_file.name
                 md.convert(temp_file_path).text_content
                 text += md.convert(temp_file_path).text_content
-                text += "\n\n"
-    return text
+                md_pages.append(text)
+
+    return "\n\n---\n\n".join(md_pages)
 
 
 class ToolCalls:
@@ -104,8 +126,8 @@ class ToolCalls:
             compact_args = json.dumps(params)
             if name == "search_wiki":
                 yield (id, name, compact_args, search_wiki(**params))
-            if name == "query_wiki":
-                yield (id, name, compact_args, query_wiki(**params))
+            if name == "read_data":
+                yield (id, name, compact_args, read_data(**params))
 
     def __str__(self) -> str:
         self._consume()
