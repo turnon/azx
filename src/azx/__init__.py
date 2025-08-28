@@ -13,6 +13,7 @@ from .renderer import (
     render_user_input,
 )
 from .storage import Store, history
+from .tools import definitions, Calls
 
 config = Configure()
 args = arguments.parse()
@@ -20,7 +21,7 @@ args = arguments.parse()
 
 class Chat:
     def __init__(self):
-        self.client = Client(**config.default_chat_model())
+        self.client = Client(**(config.default_chat_model() | {"tools": definitions}))
         self.session = prompt.session()
         self.store = None
 
@@ -45,15 +46,16 @@ class Chat:
                 self.store.log("user", user_input)
 
                 while True:
-                    content, tools = self.client.stream_response(
+                    content, tool_calls = self.client.stream_response(
                         self.store.conversation
                     )
                     whole_output = render_md_stream(content)
                     self.store.log("assistant", whole_output)
-                    for t in tools:
-                        render_tool_call(f"{t.fn_str()}({t.params_str()})")
-                        self.store.tool(t.id, t.fn_str(), t.params_str(), t.exec())
-                    if not tools:
+                    calls = Calls(tool_calls)
+                    for c in calls:
+                        render_tool_call(f"{c.fn_str()}({c.params_str()})")
+                        self.store.tool(c.id, c.fn_str(), c.params_str(), c.exec())
+                    if not len(calls):
                         break
 
             except Exception as e:
@@ -69,7 +71,7 @@ class Chat:
             name = match.group(1)
             client2_cfg = config.find_model(name)
             if client2_cfg:
-                self.client = Client(**client2_cfg)
+                self.client = Client(**(client2_cfg | {"tools": definitions}))
                 print(f"Switched to client: {client2_cfg['name']}")
             else:
                 print(f"Client '{name}' not found in config")
