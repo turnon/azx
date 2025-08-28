@@ -26,16 +26,37 @@ definitions = [
         "type": "function",
         "function": {
             "name": "read_data",
-            "description": "Read data from local file path",
+            "description": "Read data from a local file",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "uri": {
                         "type": "string",
-                        "description": "local file path",
+                        "description": "path to a local file",
                     },
                 },
                 "required": ["uri"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "write_data",
+            "description": "Write data to local file",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "path to a local file",
+                    },
+                    "data": {
+                        "type": "string",
+                        "description": "data to write",
+                    },
+                },
+                "required": ["path"],
             },
         },
     },
@@ -44,6 +65,18 @@ definitions = [
 
 def read_data(uri) -> str:
     return MarkItDown().convert(uri).text_content
+
+
+def write_data(path, data) -> str:
+    result = None
+    try:
+        with open(path, "w") as f:
+            f.write(data)
+        lines = sum(1 for c in data if c == "\n")
+        result = f"Successfully wrote {lines} line{'s' if lines > 1 else ''}"
+    except Exception as e:
+        result = f"Failed to write because: {e}"
+    return result
 
 
 def search_wiki(keyword) -> str:
@@ -122,6 +155,8 @@ class Calls:
                 yield Call(id, search_wiki, params)
             if name == "read_data":
                 yield Call(id, read_data, params)
+            if name == "write_data":
+                yield Call(id, write_data, params)
 
     def __str__(self) -> str:
         self._consume()
