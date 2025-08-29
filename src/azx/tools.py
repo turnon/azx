@@ -63,23 +63,27 @@ definitions = [
 ]
 
 
-def read_data(uri) -> str:
-    return MarkItDown().convert(uri).text_content
+def read_data(uri) -> dict:
+    try:
+        content = MarkItDown().convert(uri).text_content
+        return {"status": "success", "data": content, "err": None, "proceed": None}
+    except Exception as e:
+        return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
 
-def write_data(path, data) -> str:
-    result = None
+def write_data(path, data) -> dict:
     try:
         with open(path, "w") as f:
             f.write(data)
-        lines = sum(1 for c in data if c == "\n")
-        result = f"Successfully wrote {lines} line{'s' if lines > 1 else ''}"
+        # lines = sum(1 for c in data if c == "\n")
+        # result = f"Successfully wrote {lines} line{'s' if lines > 1 else ''}"
+        return {"status": "success", "data": None, "err": None, "proceed": None}
     except Exception as e:
-        result = f"Failed to write because: {e}"
-    return result
+        # result = f"Failed to write because: {e}"
+        return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
 
-def search_wiki(keyword) -> str:
+def search_wiki(keyword) -> dict:
     md_pages = []
     md = MarkItDown()
     url = "https://en.wikipedia.org/w/api.php"
@@ -115,7 +119,12 @@ def search_wiki(keyword) -> str:
                 text += md.convert(temp_file_path).text_content
                 md_pages.append(text)
 
-    return "\n\n---\n\n".join(md_pages)
+    return {
+        "status": "success",
+        "data": "\n\n---\n\n".join(md_pages),
+        "err": None,
+        "proceed": None,
+    }
 
 
 class Call:
@@ -136,7 +145,7 @@ class Call:
         )
 
     def exec(self) -> str:
-        return self.fn(**self.params)
+        return json.dumps(self.fn(**self.params))
 
 
 class Calls:
