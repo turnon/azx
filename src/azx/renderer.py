@@ -8,15 +8,23 @@ from rich.theme import Theme
 console = Console(theme=Theme({"markdown.hr": "medium_purple4"}))
 
 
+def render_error(string):
+    text = Text(string)
+    text.stylize("red")
+    console.print(text)
+
+
 def render_user_input(string):
     text = Text(f">>> {string}")
     text.stylize("green")
     console.print(text)
 
+
 def render_tool_call(string):
     text = Text(f"{string}...")
     text.stylize("bright_black")
     console.print(text)
+
 
 def render_md_full(string):
     console.print(Markdown(string))

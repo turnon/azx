@@ -7,6 +7,7 @@ from . import arguments
 from .agents import Client
 from .configure import Configure
 from .renderer import (
+    render_error,
     render_md_full,
     render_md_stream,
     render_tool_call,
@@ -59,8 +60,7 @@ class Chat:
                         break
 
             except Exception as e:
-                print(f"Error: {e}")
-                traceback.print_exc()
+                render_error(f"Error: {e}\n{traceback.format_exc()}")
 
     def _other_command(self, user_cmd):
         if match := re.match(r"^(?:/c|/client)$", user_cmd):
