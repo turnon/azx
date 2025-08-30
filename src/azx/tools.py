@@ -63,68 +63,70 @@ definitions = [
 ]
 
 
-def read_data(uri) -> dict:
-    try:
-        content = MarkItDown().convert(uri).text_content
-        return {"status": "success", "data": content, "err": None, "proceed": None}
-    except Exception as e:
-        return {"status": "error", "data": None, "err": str(e), "proceed": None}
+class Tools:
+    @staticmethod
+    def read_data(uri) -> dict:
+        try:
+            content = MarkItDown().convert(uri).text_content
+            return {"status": "success", "data": content, "err": None, "proceed": None}
+        except Exception as e:
+            return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
+    @staticmethod
+    def write_data(path, data) -> dict:
+        try:
+            with open(path, "w") as f:
+                f.write(data)
+            # lines = sum(1 for c in data if c == "\n")
+            # result = f"Successfully wrote {lines} line{'s' if lines > 1 else ''}"
+            return {"status": "success", "data": None, "err": None, "proceed": None}
+        except Exception as e:
+            # result = f"Failed to write because: {e}"
+            return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
-def write_data(path, data) -> dict:
-    try:
-        with open(path, "w") as f:
-            f.write(data)
-        # lines = sum(1 for c in data if c == "\n")
-        # result = f"Successfully wrote {lines} line{'s' if lines > 1 else ''}"
-        return {"status": "success", "data": None, "err": None, "proceed": None}
-    except Exception as e:
-        # result = f"Failed to write because: {e}"
-        return {"status": "error", "data": None, "err": str(e), "proceed": None}
+    @staticmethod
+    def search_wiki(keyword) -> dict:
+        md_pages = []
+        md = MarkItDown()
+        url = "https://en.wikipedia.org/w/api.php"
+        headers = {"User-Agent": "MyApp/1.0 (your.email@example.com)"}
 
-
-def search_wiki(keyword) -> dict:
-    md_pages = []
-    md = MarkItDown()
-    url = "https://en.wikipedia.org/w/api.php"
-    headers = {"User-Agent": "MyApp/1.0 (your.email@example.com)"}
-
-    keyword_params = {
-        "action": "opensearch",
-        "format": "json",
-        "search": keyword,
-        "limit": 10,
-    }
-    keyword_resp = requests.get(url, params=keyword_params, headers=headers)
-
-    for syn in keyword_resp.json()[1]:
-        title_args = {
-            "action": "query",
+        keyword_params = {
+            "action": "opensearch",
             "format": "json",
-            "titles": syn,
-            "prop": "extracts",
+            "search": keyword,
+            "limit": 10,
         }
-        title_resp = requests.get(url, params=title_args, headers=headers)
-        data = title_resp.json()
-        pages = data["query"]["pages"]
-        for page in pages.values():
-            if "extract" in page:
-                text = f"# {syn}\n\n"
-                with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".html", delete=False, encoding="utf-8"
-                ) as temp_file:
-                    temp_file.write(page["extract"])
-                    temp_file_path = temp_file.name
-                md.convert(temp_file_path).text_content
-                text += md.convert(temp_file_path).text_content
-                md_pages.append(text)
+        keyword_resp = requests.get(url, params=keyword_params, headers=headers)
 
-    return {
-        "status": "success",
-        "data": "\n\n---\n\n".join(md_pages),
-        "err": None,
-        "proceed": None,
-    }
+        for syn in keyword_resp.json()[1]:
+            title_args = {
+                "action": "query",
+                "format": "json",
+                "titles": syn,
+                "prop": "extracts",
+            }
+            title_resp = requests.get(url, params=title_args, headers=headers)
+            data = title_resp.json()
+            pages = data["query"]["pages"]
+            for page in pages.values():
+                if "extract" in page:
+                    text = f"# {syn}\n\n"
+                    with tempfile.NamedTemporaryFile(
+                        mode="w", suffix=".html", delete=False, encoding="utf-8"
+                    ) as temp_file:
+                        temp_file.write(page["extract"])
+                        temp_file_path = temp_file.name
+                    md.convert(temp_file_path).text_content
+                    text += md.convert(temp_file_path).text_content
+                    md_pages.append(text)
+
+        return {
+            "status": "success",
+            "data": "\n\n---\n\n".join(md_pages),
+            "err": None,
+            "proceed": None,
+        }
 
 
 class Call:
@@ -160,12 +162,8 @@ class Calls:
     def __iter__(self):
         for id, name, args in self._func_args():
             params = json.loads(args)
-            if name == "search_wiki":
-                yield Call(id, search_wiki, params)
-            if name == "read_data":
-                yield Call(id, read_data, params)
-            if name == "write_data":
-                yield Call(id, write_data, params)
+            method = getattr(Tools, name)
+            yield Call(id, method, params)
 
     def __str__(self) -> str:
         self._consume()
