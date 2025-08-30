@@ -175,6 +175,7 @@ class Tools:
             def generate_tree(directory, prefix=""):
                 try:
                     items = sorted(os.listdir(directory))
+                    items = [item for item in items if not item.startswith('.')]
                 except PermissionError:
                     tree_output.append(f"{prefix}[Permission Denied]")
                     return
@@ -286,7 +287,7 @@ class Call:
     def params_str(self) -> str:
         return str(
             {
-                name: val if len(val) <= 30 else f"{val[:13]}....{val[-13:]}"
+                name: val if len(val) <= 60 else f"{val[:28]}....{val[-28:]}"
                 for name, val in self.params.items()
             }
         )
