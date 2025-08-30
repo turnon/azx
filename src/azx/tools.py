@@ -1,4 +1,6 @@
 import json
+import os
+import shutil
 import tempfile
 
 import requests
@@ -25,7 +27,7 @@ definitions = [
     {
         "type": "function",
         "function": {
-            "name": "read_data",
+            "name": "read_file",
             "description": "Read data from a local file",
             "parameters": {
                 "type": "object",
@@ -42,7 +44,7 @@ definitions = [
     {
         "type": "function",
         "function": {
-            "name": "write_data",
+            "name": "write_file",
             "description": "Write data to local file",
             "parameters": {
                 "type": "object",
@@ -60,12 +62,80 @@ definitions = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_file",
+            "description": "Remove a local file, after user approval",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "path to a local file to remove",
+                    },
+                },
+                "required": ["path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dir",
+            "description": "Create a local directory",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "path to a local directory to create",
+                    },
+                },
+                "required": ["path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_dir",
+            "description": "Read directory structure like tree command",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "path to a local directory to read",
+                    },
+                },
+                "required": ["path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_dir",
+            "description": "Remove a local directory, after user approval",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "path to a local directory to remove",
+                    },
+                },
+                "required": ["path"],
+            },
+        },
+    },
 ]
 
 
 class Tools:
     @staticmethod
-    def read_data(uri) -> dict:
+    def read_file(uri) -> dict:
         try:
             content = MarkItDown().convert(uri).text_content
             return {"status": "success", "data": content, "err": None, "proceed": None}
@@ -73,15 +143,90 @@ class Tools:
             return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
     @staticmethod
-    def write_data(path, data) -> dict:
+    def write_file(path, data) -> dict:
         try:
             with open(path, "w") as f:
                 f.write(data)
-            # lines = sum(1 for c in data if c == "\n")
-            # result = f"Successfully wrote {lines} line{'s' if lines > 1 else ''}"
             return {"status": "success", "data": None, "err": None, "proceed": None}
         except Exception as e:
-            # result = f"Failed to write because: {e}"
+            return {"status": "error", "data": None, "err": str(e), "proceed": None}
+
+    @staticmethod
+    def remove_file(path) -> dict:
+        try:
+            os.remove(path)
+            return {"status": "success", "data": None, "err": None, "proceed": None}
+        except Exception as e:
+            return {"status": "error", "data": None, "err": str(e), "proceed": None}
+
+    @staticmethod
+    def create_dir(path) -> dict:
+        try:
+            os.makedirs(path, exist_ok=True)
+            return {"status": "success", "data": None, "err": None, "proceed": None}
+        except Exception as e:
+            return {"status": "error", "data": None, "err": str(e), "proceed": None}
+
+    @staticmethod
+    def read_dir(path) -> dict:
+        try:
+            tree_output = []
+
+            def generate_tree(directory, prefix=""):
+                try:
+                    items = sorted(os.listdir(directory))
+                except PermissionError:
+                    tree_output.append(f"{prefix}[Permission Denied]")
+                    return
+
+                for i, item in enumerate(items):
+                    item_path = os.path.join(directory, item)
+                    is_last = i == len(items) - 1
+
+                    if is_last:
+                        tree_output.append(f"{prefix}└── {item}")
+                        new_prefix = prefix + "    "
+                    else:
+                        tree_output.append(f"{prefix}├── {item}")
+                        new_prefix = prefix + "│   "
+
+                    if os.path.isdir(item_path):
+                        generate_tree(item_path, new_prefix)
+
+            if not os.path.exists(path):
+                return {
+                    "status": "error",
+                    "data": None,
+                    "err": "Directory does not exist",
+                    "proceed": None,
+                }
+
+            if not os.path.isdir(path):
+                return {
+                    "status": "error",
+                    "data": None,
+                    "err": "Path is not a directory",
+                    "proceed": None,
+                }
+
+            tree_output.append(os.path.basename(os.path.abspath(path)) or path)
+            generate_tree(path)
+
+            return {
+                "status": "success",
+                "data": "\n".join(tree_output),
+                "err": None,
+                "proceed": None,
+            }
+        except Exception as e:
+            return {"status": "error", "data": None, "err": str(e), "proceed": None}
+
+    @staticmethod
+    def remove_dir(path) -> dict:
+        try:
+            shutil.rmtree(path)
+            return {"status": "success", "data": None, "err": None, "proceed": None}
+        except Exception as e:
             return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
     @staticmethod
@@ -141,7 +286,7 @@ class Call:
     def params_str(self) -> str:
         return str(
             {
-                name: val if len(val) <= 9 else f"{val[:3]}...{val[-3:]}"
+                name: val if len(val) <= 30 else f"{val[:13]}....{val[-13:]}"
                 for name, val in self.params.items()
             }
         )
