@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import tempfile
 
@@ -32,12 +33,12 @@ definitions = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "uri": {
+                    "path": {
                         "type": "string",
                         "description": "path to a local file",
                     },
                 },
-                "required": ["uri"],
+                "required": ["path"],
             },
         },
     },
@@ -130,14 +131,35 @@ definitions = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "grep_file",
+            "description": "Search for a pattern in a file using regular expressions",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "path to a local file to search in",
+                    },
+                    "regexp": {
+                        "type": "string",
+                        "description": "regular expression pattern to search for",
+                    },
+                },
+                "required": ["path", "regexp"],
+            },
+        },
+    },
 ]
 
 
 class Tools:
     @staticmethod
-    def read_file(uri) -> dict:
+    def read_file(path) -> dict:
         try:
-            content = MarkItDown().convert(uri).text_content
+            content = MarkItDown().convert(path).text_content
             return {"status": "success", "data": content, "err": None, "proceed": None}
         except Exception as e:
             return {"status": "error", "data": None, "err": str(e), "proceed": None}
@@ -175,7 +197,7 @@ class Tools:
             def generate_tree(directory, prefix=""):
                 try:
                     items = sorted(os.listdir(directory))
-                    items = [item for item in items if not item.startswith('.')]
+                    items = [item for item in items if not item.startswith(".")]
                 except PermissionError:
                     tree_output.append(f"{prefix}[Permission Denied]")
                     return
@@ -273,6 +295,26 @@ class Tools:
             "err": None,
             "proceed": None,
         }
+
+    @staticmethod
+    def grep_file(path, regexp) -> dict:
+        try:
+            pattern = re.compile(regexp)
+            matched_lines = []
+
+            with open(path, "r", encoding="utf-8") as f:
+                for line_num, line in enumerate(f, 1):
+                    if pattern.search(line):
+                        matched_lines.append(f"{line_num}: {line.rstrip()}")
+
+            return {
+                "status": "success",
+                "data": matched_lines if matched_lines else "",
+                "err": None,
+                "proceed": None,
+            }
+        except Exception as e:
+            return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
 
 class Call:
