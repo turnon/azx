@@ -9,6 +9,7 @@ class Store:
     def __init__(self):
         self.started_at = _now_str()
         self.ended_at = self.started_at
+        self.progress = 0
         self.conversation = []
 
     def tool(self, id, name, args, ret):
@@ -24,7 +25,7 @@ class Store:
         )
 
         os.makedirs(self._loc(), exist_ok=True)
-        with open(os.path.join(self._loc(), f"{self.ended_at}.tool.md"), "w") as f:
+        with open(self._log_path("tool"), "w") as f:
             f.write("\n".join([id, name, args, ret]))
 
     def log(self, role: str, msg: str):
@@ -32,7 +33,7 @@ class Store:
         self.conversation.append({"role": role, "content": msg})
 
         os.makedirs(self._loc(), exist_ok=True)
-        with open(os.path.join(self._loc(), f"{self.ended_at}.{role}.md"), "w") as f:
+        with open(self._log_path(role), "w") as f:
             f.write(msg)
 
     def summary(self, sum: str):
@@ -56,8 +57,9 @@ class Store:
                 return f.read().strip()
 
         def first_question():
-            if self.conversation:
-                return self.conversation[0]["content"]
+            for speak in self.conversation:
+                if speak["role"] == "user":
+                    return speak["content"]
 
         return last_summary() or first_question() or "nothing"
 
@@ -74,6 +76,7 @@ class Store:
             if os.path.isfile(os.path.join(dir_path, f))
             and (
                 f.endswith("user.md")
+                or f.endswith("system.md")
                 or f.endswith("assistant.md")
                 or f.endswith("tool.md")
             )
@@ -84,13 +87,15 @@ class Store:
             return
 
         self.ended_at = os.path.basename(files[-1]).split(".")[0]
+        self.progress = len(files)
         self.conversation.clear()
 
         for filename in files:
             file_path = os.path.join(dir_path, filename)
             try:
                 with open(file_path, "r") as f:
-                    _, role, _ = filename.split(".")
+                    segments = filename.split(".")
+                    role = segments[-2]
                     if role == "tool":
                         fn_id = f.readline().strip()
                         fn_name = f.readline().strip()
@@ -117,6 +122,12 @@ class Store:
 
     def _loc(self) -> str:
         return os.path.join(base_dir, self.started_at)
+
+    def _log_path(self, role) -> str:
+        file_name = f"{self.ended_at}.{self.progress}.{role}.md"
+        full_path = os.path.join(self._loc(), file_name)
+        self.progress += 1
+        return full_path
 
     def _add_tool_to_last_assistant_msg(self, id, name, args):
         last_msg = next(
