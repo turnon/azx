@@ -134,14 +134,14 @@ definitions = [
     {
         "type": "function",
         "function": {
-            "name": "grep_file",
+            "name": "grep_files",
             "description": "Search for a pattern in a file using regular expressions",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "path to a local file to search in",
+                        "description": "path to a local file or directory to search in",
                     },
                     "regexp": {
                         "type": "string",
@@ -297,15 +297,31 @@ class Tools:
         }
 
     @staticmethod
-    def grep_file(path, regexp) -> dict:
+    def grep_files(path, regexp) -> dict:
+        def get_files(path):
+            if os.path.isfile(path):
+                yield path
+            elif os.path.isdir(path):
+                for root, dirs, files in os.walk(path):
+                    for file in files:
+                        yield os.path.join(root, file)
+
+        def grep_file(path, pattern):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    for line_num, line in enumerate(f, 1):
+                        if pattern.search(line):
+                            yield f"{file_path}:{line_num}: {line.rstrip()}"
+            except (UnicodeDecodeError, PermissionError):
+                pass
+
         try:
             pattern = re.compile(regexp)
             matched_lines = []
 
-            with open(path, "r", encoding="utf-8") as f:
-                for line_num, line in enumerate(f, 1):
-                    if pattern.search(line):
-                        matched_lines.append(f"{line_num}: {line.rstrip()}")
+            for file_path in get_files(path):
+                for line in grep_file(file_path, pattern):
+                    matched_lines.append(line)
 
             return {
                 "status": "success",
