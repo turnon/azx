@@ -1,3 +1,4 @@
+import inspect
 import json
 import os
 import re
@@ -367,7 +368,9 @@ class Calls:
         for id, name, args in self._func_args():
             params = json.loads(args)
             method = getattr(Tools, name)
-            yield Call(id, method, params)
+            valid_params = inspect.signature(method).parameters.keys()
+            filtered_params = {k: v for k, v in params.items() if k in valid_params}
+            yield Call(id, method, filtered_params)
 
     def __str__(self) -> str:
         self._consume()
