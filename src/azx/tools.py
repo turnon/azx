@@ -3,160 +3,141 @@ import json
 import os
 import re
 import shutil
-import tempfile
 
-import requests
 from markitdown import MarkItDown
 
-definitions = [
-    {
-        "type": "function",
-        "function": {
-            "name": "search_wiki",
-            "description": "Search on wikipedia to get detail info",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "keyword": {
-                        "type": "string",
-                        "description": "keyword to search wikipedia",
-                    },
-                },
-                "required": ["keyword"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "read_file",
-            "description": "Read data from a local file",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "path to a local file",
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "write_file",
-            "description": "Write data to local file",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "path to a local file",
-                    },
-                    "data": {
-                        "type": "string",
-                        "description": "data to write",
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "remove_file",
-            "description": "Remove a local file, after user approval",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "path to a local file to remove",
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "create_dir",
-            "description": "Create a local directory",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "path to a local directory to create",
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "read_dir",
-            "description": "Read directory structure like tree command",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "path to a local directory to read",
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "remove_dir",
-            "description": "Remove a local directory, after user approval",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "path to a local directory to remove",
-                    },
-                },
-                "required": ["path"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "grep_files",
-            "description": "Search for a pattern in a file using regular expressions",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "path to a local file or directory to search in",
-                    },
-                    "regexp": {
-                        "type": "string",
-                        "description": "regular expression pattern to search for",
-                    },
-                },
-                "required": ["path", "regexp"],
-            },
-        },
-    },
-]
 
+class LocalTools:
+    definitions = [
+        {
+            "type": "function",
+            "function": {
+                "name": "read_file",
+                "description": "Read data from a local file",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "path to a local file",
+                        },
+                    },
+                    "required": ["path"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "write_file",
+                "description": "Write data to local file",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "path to a local file",
+                        },
+                        "data": {
+                            "type": "string",
+                            "description": "data to write",
+                        },
+                    },
+                    "required": ["path"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "remove_file",
+                "description": "Remove a local file, after user approval",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "path to a local file to remove",
+                        },
+                    },
+                    "required": ["path"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "create_dir",
+                "description": "Create a local directory",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "path to a local directory to create",
+                        },
+                    },
+                    "required": ["path"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "read_dir",
+                "description": "Read directory structure like tree command",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "path to a local directory to read",
+                        },
+                    },
+                    "required": ["path"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "remove_dir",
+                "description": "Remove a local directory, after user approval",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "path to a local directory to remove",
+                        },
+                    },
+                    "required": ["path"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "grep_files",
+                "description": "Search for a pattern in a file using regular expressions",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "path to a local file or directory to search in",
+                        },
+                        "regexp": {
+                            "type": "string",
+                            "description": "regular expression pattern to search for",
+                        },
+                    },
+                    "required": ["path", "regexp"],
+                },
+            },
+        },
+    ]
 
-class Tools:
     @staticmethod
     def read_file(path) -> dict:
         try:
@@ -254,50 +235,6 @@ class Tools:
             return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
     @staticmethod
-    def search_wiki(keyword) -> dict:
-        md_pages = []
-        md = MarkItDown()
-        url = "https://en.wikipedia.org/w/api.php"
-        headers = {"User-Agent": "MyApp/1.0 (your.email@example.com)"}
-
-        keyword_params = {
-            "action": "opensearch",
-            "format": "json",
-            "search": keyword,
-            "limit": 10,
-        }
-        keyword_resp = requests.get(url, params=keyword_params, headers=headers)
-
-        for syn in keyword_resp.json()[1]:
-            title_args = {
-                "action": "query",
-                "format": "json",
-                "titles": syn,
-                "prop": "extracts",
-            }
-            title_resp = requests.get(url, params=title_args, headers=headers)
-            data = title_resp.json()
-            pages = data["query"]["pages"]
-            for page in pages.values():
-                if "extract" in page:
-                    text = f"# {syn}\n\n"
-                    with tempfile.NamedTemporaryFile(
-                        mode="w", suffix=".html", delete=False, encoding="utf-8"
-                    ) as temp_file:
-                        temp_file.write(page["extract"])
-                        temp_file_path = temp_file.name
-                    md.convert(temp_file_path).text_content
-                    text += md.convert(temp_file_path).text_content
-                    md_pages.append(text)
-
-        return {
-            "status": "success",
-            "data": "\n\n---\n\n".join(md_pages),
-            "err": None,
-            "proceed": None,
-        }
-
-    @staticmethod
     def grep_files(path, regexp) -> dict:
         def get_files(path):
             if os.path.isfile(path):
@@ -334,25 +271,51 @@ class Tools:
             return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
 
+class MCPClient:
+    def __init__(self, mcp):
+        self.client = mcp
+
+    async def list_tools(self):
+        tools = await self.client.list_tools()
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": t.inputSchema,
+                },
+            }
+            for t in tools
+        ]
+
+    async def call_tool(self, name, params):
+        result = await self.client.call_tool(name, params, raise_on_error=False)
+        if result.is_error:
+            err = result.content[0].text
+            return {"status": "error", "data": None, "err": err, "proceed": None}
+
+        data = "".join([c.text for c in result.content if c.type == "text"])
+        return {"status": "success", "data": data, "err": None, "proceed": None}
+
+
 class Call:
     def __init__(self, id, fn, params):
         self.id = id
         self.fn = fn
         self.params = params
 
-    def fn_str(self) -> str:
-        return self.fn.__name__
-
     def params_str(self) -> str:
+        def stringified_value():
+            for name, val in self.params.items():
+                yield name, str(val)
+
         return str(
             {
                 name: val if len(val) <= 60 else f"{val[:28]}....{val[-28:]}"
-                for name, val in self.params.items()
+                for name, val in stringified_value()
             }
         )
-
-    def exec(self) -> str:
-        return json.dumps(self.fn(**self.params))
 
 
 class Calls:
@@ -366,11 +329,13 @@ class Calls:
 
     def __iter__(self):
         for id, name, args in self._func_args():
-            params = json.loads(args)
-            method = getattr(Tools, name)
-            valid_params = inspect.signature(method).parameters.keys()
-            filtered_params = {k: v for k, v in params.items() if k in valid_params}
-            yield Call(id, method, filtered_params)
+            params = None
+            try:
+                params = json.loads(args)
+            except Exception as e:
+                print(args)
+                raise e
+            yield Call(id, name, params)
 
     def __str__(self) -> str:
         self._consume()
@@ -381,20 +346,47 @@ class Calls:
             yield (fn_call["id"], fn_call["fn"]["name"], fn_call["fn"]["args"])
 
     def _consume(self):
-        if self.buffer is not None:
-            return self.buffer
-
-        buffer = {}
-        for tool in self.stream:
-            for t in tool:
-                index = t.index
-                if index not in buffer:
-                    buffer[index] = {
-                        "id": t.id,
-                        "fn": {"name": t.function.name, "args": ""},
-                    }
-                if t.function.arguments:
-                    buffer[index]["fn"]["args"] += t.function.arguments
-
-        self.buffer = buffer
+        if self.buffer is None:
+            buffer = {}
+            for tool in self.stream:
+                for t in tool:
+                    index = t.index
+                    if index not in buffer:
+                        buffer[index] = {
+                            "id": t.id,
+                            "fn": {"name": t.function.name, "args": ""},
+                        }
+                    if t.function.arguments:
+                        buffer[index]["fn"]["args"] += t.function.arguments
+            self.buffer = buffer
         return self.buffer
+
+
+class Tools:
+    def __init__(self):
+        self.mcps: list[MCPClient] = []
+
+    def add_mcp(self, mcp):
+        self.mcps.append(MCPClient(mcp))
+
+    async def specs(self) -> list:
+        defs = [] + LocalTools.definitions
+        for mcp in self.mcps:
+            defs += await mcp.list_tools()
+        return defs
+
+    async def execute(self, call: Call):
+        async def exec(call: Call):
+            for mcp in self.mcps:
+                for mcp_tool in await mcp.list_tools():
+                    if mcp_tool["function"]["name"] == call.fn:
+                        return await mcp.call_tool(call.fn, call.params)
+
+            method = getattr(LocalTools, call.fn)
+            valid_params = inspect.signature(method).parameters.keys()
+            filtered_params = {
+                k: v for k, v in call.params.items() if k in valid_params
+            }
+            return method(**filtered_params)
+
+        return json.dumps(await exec(call))

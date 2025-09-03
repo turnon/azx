@@ -1,6 +1,9 @@
+import asyncio
 import json
 import re
 import traceback
+
+from contextlib import AsyncExitStack
 
 from . import prompt
 from . import arguments
@@ -14,7 +17,9 @@ from .renderer import (
     render_user_input,
 )
 from .storage import Store, history
-from .tools import definitions, Calls
+from .tools import Calls, Tools
+
+from fastmcp import Client as MCPClient
 
 config = Configure()
 args = arguments.parse()
@@ -22,19 +27,38 @@ args = arguments.parse()
 
 class Chat:
     def __init__(self):
-        self.client = Client(**(config.default_chat_model() | {"tools": definitions}))
+        self.model = config.default_chat_model()
+        self.mcps = []
         self.session = prompt.session()
         self.store = None
 
-    def run(self):
+    async def run(self):
+        while True:
+            async with AsyncExitStack() as stack:
+                mcp_clients = await asyncio.gather(
+                    *[stack.enter_async_context(MCPClient(mcp)) for mcp in self.mcps]
+                )
+                if await self._run(mcp_clients):
+                    return
+                continue
+
+    async def _run(self, mcp_clients):
+        self.tools = Tools()
+        for mcp in mcp_clients:
+            self.tools.add_mcp(mcp)
+        self.client = Client(**(self.model | {"tools": await self.tools.specs()}))
+
         while True:
             try:
-                user_input = self.session.prompt()
+                user_input = await self.session.prompt_async()
 
                 # handle command
                 user_cmd = user_input.strip().lower()
                 if user_cmd in ("/q", "/quit"):
-                    break
+                    return True
+
+                if self._change_env(user_cmd):
+                    return False
 
                 if self._other_command(user_cmd):
                     continue
@@ -53,28 +77,44 @@ class Chat:
                     whole_output = render_md_stream(content)
                     self.store.log("assistant", whole_output)
                     calls = Calls(tool_calls)
-                    for c in calls:
-                        render_tool_call(f"{c.fn_str()}({c.params_str()})")
-                        self.store.tool(c.id, c.fn_str(), c.params_str(), c.exec())
+                    for call in calls:
+                        render_tool_call(f"{call.fn}({call.params_str()})")
+                        self.store.tool(
+                            call.id,
+                            call.fn,
+                            call.params_str(),
+                            await self.tools.execute(call),
+                        )
                     if not len(calls):
                         break
 
             except Exception as e:
                 render_error(f"Error: {e}\n{traceback.format_exc()}")
 
-    def _other_command(self, user_cmd):
-        if match := re.match(r"^(?:/c|/client)$", user_cmd):
-            render_md_full(f"clients:\n{config.models()}")
-            return True
-
+    def _change_env(self, user_cmd):
         if match := re.match(r"^(?:/c|/client) (.+)$", user_cmd):
             name = match.group(1)
             client2_cfg = config.find_model(name)
             if client2_cfg:
-                self.client = Client(**(client2_cfg | {"tools": definitions}))
+                self.model = client2_cfg
                 print(f"Switched to client: {client2_cfg['name']}")
             else:
                 print(f"Client '{name}' not found in config")
+            return True
+
+        if match := re.match(r"^(?:/t|/tool)\+ (.+)$", user_cmd):
+            self.mcps = list({i for i in (self.mcps + [match.group(1)])})
+            return True
+
+        if match := re.match(r"^(?:/t|/tool)\- (.+)$", user_cmd):
+            self.mcps.remove(match.group(1))
+            return True
+
+        return False
+
+    def _other_command(self, user_cmd):
+        if match := re.match(r"^(?:/c|/client)$", user_cmd):
+            render_md_full(f"clients:\n{config.models()}")
             return True
 
         if user_cmd in ("/n", "/new"):
@@ -167,7 +207,7 @@ def main():
             return
         return ocr()
 
-    Chat().run()
+    asyncio.run(Chat().run())
 
 
 if __name__ == "__main__":
