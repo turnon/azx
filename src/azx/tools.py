@@ -5,6 +5,7 @@ import re
 import shutil
 
 from markitdown import MarkItDown
+from fastmcp import Client
 
 
 class LocalTools:
@@ -272,22 +273,31 @@ class LocalTools:
 
 
 class MCPClient:
-    def __init__(self, mcp):
+    def __init__(self, mcp: Client):
         self.client = mcp
+        self.specs = None
+
+    async def __aenter__(self):
+        await self.client.__aenter__()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.client.__aexit__(exc_type, exc_val, exc_tb)
 
     async def list_tools(self):
-        tools = await self.client.list_tools()
-        return [
-            {
-                "type": "function",
-                "function": {
-                    "name": t.name,
-                    "description": t.description,
-                    "parameters": t.inputSchema,
-                },
-            }
-            for t in tools
-        ]
+        if self.specs is None:
+            tools = await self.client.list_tools()
+            self.specs = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": t.inputSchema,
+                    },
+                }
+                for t in tools
+            ]
+        return self.specs
 
     async def call_tool(self, name, params):
         result = await self.client.call_tool(name, params, raise_on_error=False)
@@ -364,20 +374,31 @@ class Calls:
 
 class Tools:
     def __init__(self):
-        self.mcps: list[MCPClient] = []
+        self.mcps: dict[str, MCPClient] = {}
 
-    def add_mcp(self, mcp):
-        self.mcps.append(MCPClient(mcp))
+    async def add_mcp(self, transport):
+        if transport in self.mcps.items():
+            return
+        mcp = MCPClient(Client(transport))
+        await mcp.__aenter__()
+        self.mcps[transport] = mcp
+
+    async def del_mcp(self, transport):
+        mcp = self.mcps.get(transport, None)
+        if mcp is None:
+            return
+        del self.mcps[transport]
+        await mcp.__aexit__(None, None, None)
 
     async def specs(self) -> list:
         defs = [] + LocalTools.definitions
-        for mcp in self.mcps:
+        for _, mcp in self.mcps.items():
             defs += await mcp.list_tools()
         return defs
 
     async def execute(self, call: Call):
         async def exec(call: Call):
-            for mcp in self.mcps:
+            for _, mcp in self.mcps.items():
                 for mcp_tool in await mcp.list_tools():
                     if mcp_tool["function"]["name"] == call.fn:
                         return await mcp.call_tool(call.fn, call.params)
