@@ -341,7 +341,7 @@ class Calls:
         for id, name, args in self._func_args():
             params = None
             try:
-                params = json.loads(args)
+                params = json.loads(args.replace("'", '"'))
             except Exception as e:
                 print(args)
                 raise e
