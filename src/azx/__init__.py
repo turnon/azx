@@ -29,7 +29,7 @@ class Chat:
         self.store = None
 
     async def run(self):
-        self.client = Client(**(self.model | {"tools": await self.tools.specs()}))
+        await self._new_client()
 
         while True:
             try:
@@ -71,6 +71,9 @@ class Chat:
             except Exception as e:
                 render_error(f"Error: {e}\n{traceback.format_exc()}")
 
+    async def _new_client(self):
+        self.client = Client(**(self.model | {"tools": await self.tools.specs()}))
+
     async def _other_command(self, user_cmd):
         if match := re.match(r"^(?:/c|/client)$", user_cmd):
             render_md_full(f"clients:\n{config.models()}")
@@ -81,9 +84,7 @@ class Chat:
             client2_cfg = config.find_model(name)
             if client2_cfg:
                 self.model = client2_cfg
-                self.client = Client(
-                    **(self.model | {"tools": await self.tools.specs()})
-                )
+                await self._new_client()
                 print(f"Switched to client: {client2_cfg['name']}")
             else:
                 print(f"Client '{name}' not found in config")
@@ -130,12 +131,12 @@ class Chat:
 
         if match := re.match(r"^(?:/t|/tool)\+ (.+)$", user_cmd):
             await self.tools.add_mcp(match.group(1))
-            self.client = Client(**(self.model | {"tools": await self.tools.specs()}))
+            await self._new_client()
             return True
 
         if match := re.match(r"^(?:/t|/tool)\- (.+)$", user_cmd):
             await self.tools.del_mcp(match.group(1))
-            self.client = Client(**(self.model | {"tools": await self.tools.specs()}))
+            await self._new_client()
             return True
 
         if user_cmd in ("/?", "/help") or re.match(r"^/[a-zA-Z0-9]+$", user_cmd):
