@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 
+import yaml
 from markitdown import MarkItDown
 from fastmcp import Client
 
@@ -341,7 +342,7 @@ class Calls:
         for id, name, args in self._func_args():
             params = None
             try:
-                params = json.loads(args.replace("'", '"'))
+                params = yaml.load(args, yaml.CLoader)
             except Exception as e:
                 print(args)
                 raise e
