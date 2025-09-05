@@ -167,7 +167,7 @@ def history() -> str:
         and re.match(r"^\d{4}_\d{4}_\d{6}$", item)
     ]
 
-    stores.sort(key=lambda s: s.ended_at, reverse=True)
+    stores.sort(key=lambda s: s.ended_at)
 
     items = [f"{i + 1}. {store}" for i, store in enumerate(stores)]
 
