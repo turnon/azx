@@ -1,5 +1,4 @@
 import inspect
-import json
 import os
 import re
 import shutil
@@ -397,18 +396,13 @@ class Tools:
             defs += await mcp.list_tools()
         return defs
 
-    async def execute(self, call: Call):
-        async def exec(call: Call):
-            for _, mcp in self.mcps.items():
-                for mcp_tool in await mcp.list_tools():
-                    if mcp_tool["function"]["name"] == call.fn:
-                        return await mcp.call_tool(call.fn, call.params)
+    async def execute(self, call: Call) -> dict:
+        for _, mcp in self.mcps.items():
+            for mcp_tool in await mcp.list_tools():
+                if mcp_tool["function"]["name"] == call.fn:
+                    return await mcp.call_tool(call.fn, call.params)
 
-            method = getattr(LocalTools, call.fn)
-            valid_params = inspect.signature(method).parameters.keys()
-            filtered_params = {
-                k: v for k, v in call.params.items() if k in valid_params
-            }
-            return method(**filtered_params)
-
-        return json.dumps(await exec(call))
+        method = getattr(LocalTools, call.fn)
+        valid_params = inspect.signature(method).parameters.keys()
+        filtered_params = {k: v for k, v in call.params.items() if k in valid_params}
+        return method(**filtered_params)

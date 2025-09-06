@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import re
 
@@ -6,13 +7,15 @@ base_dir = os.path.expanduser("~/.azx")
 
 
 class Store:
+    tool_status_map = {"success": "data", "error": "err", "partial": "proceed"}
+
     def __init__(self):
         self.started_at = _now_str()
         self.ended_at = self.started_at
         self.progress = 0
         self.conversation = []
 
-    def tool(self, id, name, args, ret):
+    def tool(self, id: str, name: str, args: str, ret: dict):
         self._add_tool_to_last_assistant_msg(id, name, args)
         self.ended_at = _now_str()
         self.conversation.append(
@@ -20,13 +23,16 @@ class Store:
                 "role": "tool",
                 "tool_call_id": id,
                 "name": name,
-                "content": ret,
+                "content": json.dumps(ret),
             }
         )
 
+        status = ret["status"]
+        msg = ret[self.tool_status_map[status]]
+
         os.makedirs(self._loc(), exist_ok=True)
         with open(self._log_path("tool"), "w") as f:
-            f.write("\n".join([id, name, args, ret]))
+            f.write("\n".join([id, name, args, status, msg]))
 
     def log(self, role: str, msg: str):
         self.ended_at = _now_str()
@@ -100,14 +106,24 @@ class Store:
                         fn_id = f.readline().strip()
                         fn_name = f.readline().strip()
                         fn_args = f.readline().strip()
-                        fn_ret = f.read().strip()
+                        content = {
+                            "status": None,
+                            "data": None,
+                            "err": None,
+                            "proceed": None,
+                        }
+                        fn_status = f.readline().strip()
+                        fn_msg = f.read().strip()
+                        content["status"] = fn_status
+                        content[self.tool_status_map[fn_status]] = fn_msg
+                        self.tool_status_map[fn_status]
                         self._add_tool_to_last_assistant_msg(fn_id, fn_name, fn_args)
                         self.conversation.append(
                             {
                                 "role": role,
                                 "tool_call_id": fn_id,
                                 "name": fn_name,
-                                "content": fn_ret,
+                                "content": json.dumps(content),
                             }
                         )
                     else:
