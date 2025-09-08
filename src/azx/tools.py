@@ -264,7 +264,7 @@ class LocalTools:
 
             return {
                 "status": "success",
-                "data": matched_lines if matched_lines else "",
+                "data": "\n".join(matched_lines) if matched_lines else "",
                 "err": None,
                 "proceed": None,
             }
