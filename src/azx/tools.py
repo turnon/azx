@@ -152,7 +152,7 @@ class LocalTools:
         try:
             with open(path, "w") as f:
                 f.write(data)
-            return {"status": "success", "data": None, "err": None, "proceed": None}
+            return {"status": "success", "data": "", "err": None, "proceed": None}
         except Exception as e:
             return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
@@ -160,7 +160,7 @@ class LocalTools:
     def remove_file(path) -> dict:
         try:
             os.remove(path)
-            return {"status": "success", "data": None, "err": None, "proceed": None}
+            return {"status": "success", "data": "", "err": None, "proceed": None}
         except Exception as e:
             return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
@@ -168,7 +168,7 @@ class LocalTools:
     def create_dir(path) -> dict:
         try:
             os.makedirs(path, exist_ok=True)
-            return {"status": "success", "data": None, "err": None, "proceed": None}
+            return {"status": "success", "data": "", "err": None, "proceed": None}
         except Exception as e:
             return {"status": "error", "data": None, "err": str(e), "proceed": None}
 
