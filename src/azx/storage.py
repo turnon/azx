@@ -47,6 +47,22 @@ class Store:
         with open(os.path.join(self._loc(), f"{self.ended_at}.sum.md"), "w") as f:
             f.write(sum)
 
+    def note(self, msg: str):
+        content = f"{'前情提要：' if self._chinese() else 'Previously:'}\n\n{msg}"
+        self.ended_at = _now_str()
+        self.conversation = [{"role": "system", "content": content}]
+        os.makedirs(self._loc(), exist_ok=True)
+        with open(self._log_path("note"), "w") as f:
+            f.write(msg)
+
+    def compaction(self) -> list:
+        prompt = (
+            "简明地总结上述对话提出了什么问题，使用了什么工具，打开了什么文件或网址，得到了什么答案"
+            if self._chinese()
+            else "Briefly outline the questions discussed above, the tools applied, the files or URLs opened, and the answers provided"
+        )
+        return self.conversation + [{"role": "user", "content": prompt}]
+
     def sum_or_quest(self):
         def last_summary():
             files = [
@@ -133,6 +149,16 @@ class Store:
                         )
             except Exception:
                 continue
+
+    def _chinese(self) -> bool:
+        def qa():
+            for c in self.conversation:
+                if c["role"] in ["user", "assistant"]:
+                    yield c["content"]
+
+        cn = sum(len(re.findall(r"[\u4e00-\u9fff]", c)) for c in qa())
+        tot = sum(len(c) for c in qa())
+        return (cn / tot) > 0.5
 
     def __str__(self):
         return f"**{self.started_at}** ~ **{self.ended_at}**: {self.sum_or_quest()}"

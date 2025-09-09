@@ -75,33 +75,13 @@ class Chat:
     def _auto_compact(self, usage):
         self.store.usage = next(usage, 0).total_tokens
         while self.store.usage > (self.model.get("window", 4096) * 0.9):
-            # talk = self.store.conversation + []
-            # while True:
-            #     if talk[-1]["role"] == "user":
-            #         talk[-1][
-            #             "content"
-            #         ] = "Provide a detailed but concise summary of our conversation above. Focus on information that would be helpful for continuing the conversation, including what we did, what we're doing, which files we're working on, and what we're going to do next."
-            #         break
-            #     talk.pop()
-            # while True:
-            #     if talk[0]["role"] != "system":
-            #         break
-            #     talk = talk[1:]
-            talk = self.store.conversation + [
-                {
-                    "role": "user",
-                    "content": "Provide a detailed but concise summary of our conversation above. Focus on information that would be helpful for continuing the conversation, including what we did, what files we're working on.",
-                }
-            ]
-            # for msg in talk:
-            #     print(f"{msg['role']}: {msg['content'][:30]}")
-            content, tool_calls, usage = self.client.stream_response(talk)
+            content, tools, usage = self.client.stream_response(self.store.compaction())
             print("<<<")
             whole_output = render_md_stream(content)
             print("<<<")
             self.store.usage = next(usage, 0).completion_tokens
-            self.store.conversation = [{"role": "system", "content": whole_output}]
-            for _ in tool_calls:
+            self.store.note(whole_output)
+            for _ in tools:
                 pass
 
     async def _new_client(self):
