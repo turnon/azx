@@ -14,6 +14,7 @@ class Store:
         self.ended_at = self.started_at
         self.progress = 0
         self.conversation = []
+        self.usage = 0
 
     def tool(self, id: str, name: str, args: str, ret: dict):
         self._add_tool_to_last_assistant_msg(id, name, args)

@@ -30,9 +30,7 @@ If something looks like list in full text, represent it with legal markdown list
 class Client:
     def __init__(self, name: str, base_url: str, model: str, api_key: str, tools):
         self.name = name
-        self.base_url = base_url
         self.model = model
-        self.api_key = api_key
         self.tools = tools
         self._client = OpenAI(base_url=base_url, api_key=api_key)
 
@@ -42,18 +40,30 @@ class Client:
             messages=messages,
             tools=self.tools,
             stream=True,
+            stream_options={"include_usage": True},
         )
 
         stream1, stream2 = tee(stream)
+        stream3, stream4 = tee(stream2)
 
         return (
-            chunk.choices[0].delta.content
-            for chunk in stream1
-            if chunk.choices and chunk.choices[0].delta.content
-        ), (
-            chunk.choices[0].delta.tool_calls
-            for chunk in stream2
-            if chunk.choices and chunk.choices[0].delta.tool_calls
+            (
+                chunk.choices[0].delta.content
+                for chunk in stream1
+                if chunk.choices and chunk.choices[0].delta.content
+            ),
+            (
+                chunk.choices[0].delta.tool_calls
+                for chunk in stream3
+                if chunk.choices and chunk.choices[0].delta.tool_calls
+            ),
+            (
+                chunk.usage
+                for chunk in stream4
+                if chunk.usage is not None
+                and chunk.usage.total_tokens is not None
+                and chunk.usage.total_tokens > 0
+            ),
         )
 
     def ocr(self, uri, prompt=_ocr_prompt) -> str:

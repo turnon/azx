@@ -51,7 +51,7 @@ class Chat:
                 self.store.log("user", user_input)
 
                 while True:
-                    content, tool_calls = self.client.stream_response(
+                    content, tool_calls, usage = self.client.stream_response(
                         self.store.conversation
                     )
                     whole_output = render_md_stream(content)
@@ -65,11 +65,44 @@ class Chat:
                             call.params_str(),
                             await self.tools.execute(call),
                         )
+                    self._auto_compact(usage)
                     if not len(calls):
                         break
 
             except Exception as e:
                 render_error(f"Error: {e}\n{traceback.format_exc()}")
+
+    def _auto_compact(self, usage):
+        self.store.usage = next(usage, 0).total_tokens
+        while self.store.usage > (self.model.get("window", 4096) * 0.9):
+            # talk = self.store.conversation + []
+            # while True:
+            #     if talk[-1]["role"] == "user":
+            #         talk[-1][
+            #             "content"
+            #         ] = "Provide a detailed but concise summary of our conversation above. Focus on information that would be helpful for continuing the conversation, including what we did, what we're doing, which files we're working on, and what we're going to do next."
+            #         break
+            #     talk.pop()
+            # while True:
+            #     if talk[0]["role"] != "system":
+            #         break
+            #     talk = talk[1:]
+            talk = self.store.conversation + [
+                {
+                    "role": "user",
+                    "content": "Provide a detailed but concise summary of our conversation above. Focus on information that would be helpful for continuing the conversation, including what we did, what files we're working on.",
+                }
+            ]
+            # for msg in talk:
+            #     print(f"{msg['role']}: {msg['content'][:30]}")
+            content, tool_calls, usage = self.client.stream_response(talk)
+            print("<<<")
+            whole_output = render_md_stream(content)
+            print("<<<")
+            self.store.usage = next(usage, 0).completion_tokens
+            self.store.conversation = [{"role": "system", "content": whole_output}]
+            for _ in tool_calls:
+                pass
 
     async def _new_client(self):
         self.client = Client(**(self.model | {"tools": await self.tools.specs()}))
