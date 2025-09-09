@@ -5,7 +5,15 @@ from rich.markdown import Markdown
 from rich.text import Text
 from rich.theme import Theme
 
-console = Console(theme=Theme({"markdown.hr": "medium_purple4"}))
+console = Console(
+    theme=Theme(
+        {
+            "markdown.block_quote": "violet",
+            "markdown.hr": "medium_purple4",
+            "markdown.link_url": "sky_blue1",
+        }
+    )
+)
 
 
 def render_error(string):
