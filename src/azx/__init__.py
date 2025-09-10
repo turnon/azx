@@ -76,7 +76,10 @@ class Chat:
     def _auto_compact(self, usage):
         self.store.usage = next(usage, 0).total_tokens
         while self.store.usage > (self.model.get("window", 4096) * 0.9):
-            content, tools, usage = self.client.stream_response(self.store.compaction())
+            content, tools, usage = self.client.stream_response(
+                self.store.compaction(),
+                json=True,
+            )
             print("<<<")
             whole_output = render_md_stream(content)
             print("<<<")

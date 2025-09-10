@@ -3,7 +3,7 @@ import os
 from itertools import tee
 from pathlib import Path
 
-from openai import OpenAI
+from openai import OpenAI, NOT_GIVEN
 
 
 _mime_types = {
@@ -34,11 +34,13 @@ class Client:
         self.tools = tools
         self._client = OpenAI(base_url=base_url, api_key=api_key)
 
-    def stream_response(self, messages: list[dict]):
+    def stream_response(self, messages: list[dict], json: bool = False):
+        response_format = {"type": "json_object"} if json else NOT_GIVEN
         stream = self._client.chat.completions.create(
             model=self.model,
             messages=messages,
             tools=self.tools,
+            response_format=response_format,
             stream=True,
             stream_options={"include_usage": True},
         )
