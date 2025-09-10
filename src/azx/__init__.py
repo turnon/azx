@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+import time
 import traceback
 
 from . import prompt
@@ -79,10 +80,14 @@ class Chat:
             print("<<<")
             whole_output = render_md_stream(content)
             print("<<<")
-            self.store.usage = next(usage, 0).completion_tokens
-            self.store.note(whole_output)
             for _ in tools:
                 pass
+            token_used = next(usage, 0).completion_tokens
+            if len(whole_output) == 0:
+                time.sleep(1)
+                continue
+            self.store.usage = token_used
+            self.store.note(whole_output)
 
     async def _new_client(self):
         self.client = Client(**(self.model | {"tools": await self.tools.specs()}))

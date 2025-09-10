@@ -48,7 +48,11 @@ class Store:
             f.write(sum)
 
     def note(self, msg: str):
-        content = f"{'前情提要：' if self._chinese() else 'Previously:'}\n\n{msg}"
+        content = (
+            f"前情提要：\n\n{msg}\n\n现在我们继续……"
+            if self._chinese()
+            else f"Previously:\n\n{msg}\n\nNow we continue ..."
+        )
         self.ended_at = _now_str()
         self.conversation = [{"role": "system", "content": content}]
         os.makedirs(self._loc(), exist_ok=True)
@@ -57,9 +61,9 @@ class Store:
 
     def compaction(self) -> list:
         prompt = (
-            "简明地总结上述对话提出了什么问题，使用了什么工具，打开了什么文件或网址，得到了什么答案"
+            "简明地总结上述对话（包括前情和新的对话），里面提出了什么问题，使用了什么工具，打开了什么文件或网址，得到了什么答案"
             if self._chinese()
-            else "Briefly outline the questions discussed above, the tools applied, the files or URLs opened, and the answers provided"
+            else "Briefly summarize the questions raised in the above conversation (including previous context and new dialogue), what tools were used, what files or URLs were opened, and what answers were obtained"
         )
         return self.conversation + [{"role": "user", "content": prompt}]
 
@@ -102,6 +106,7 @@ class Store:
                 or f.endswith("system.md")
                 or f.endswith("assistant.md")
                 or f.endswith("tool.md")
+                or f.endswith("note.md")
             )
         ]
         files.sort()
@@ -142,6 +147,11 @@ class Store:
                                 "name": fn_name,
                                 "content": json.dumps(content),
                             }
+                        )
+                    elif role == "note":
+                        self.conversation.clear()
+                        self.conversation.append(
+                            {"role": "system", "content": f.read().strip()}
                         )
                     else:
                         self.conversation.append(
