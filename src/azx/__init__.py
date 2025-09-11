@@ -80,12 +80,12 @@ class Chat:
                 self.store.compaction(),
                 json=True,
             )
-            print("<<<")
+            print("<<< taking note ...")
             whole_output = render_md_stream(content)
-            print("<<<")
             for _ in tools:
                 pass
             token_used = next(usage, 0).completion_tokens
+            print(f"<<< note taken: {token_used}/{self.store.usage}")
             if len(whole_output) == 0:
                 time.sleep(1)
                 continue
@@ -93,7 +93,9 @@ class Chat:
             self.store.note(whole_output)
 
     async def _new_client(self):
-        self.client = Client(**(self.model | {"tools": await self.tools.specs()}))
+        conn_keys = ["name", "base_url", "model", "api_key"]
+        conn_kv = {k: self.model[k] for k in self.model if k in conn_keys}
+        self.client = Client(**(conn_kv | {"tools": await self.tools.specs()}))
 
     async def _other_command(self, user_cmd):
         if match := re.match(r"^(?:/c|/client)$", user_cmd):
