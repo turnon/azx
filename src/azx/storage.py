@@ -14,6 +14,7 @@ class Store:
         self.ended_at = self.started_at
         self.progress = 0
         self.conversation = []
+        self.usage = 0
 
     def tool(self, id: str, name: str, args: str, ret: dict):
         self._add_tool_to_last_assistant_msg(id, name, args)
@@ -45,6 +46,27 @@ class Store:
     def summary(self, sum: str):
         with open(os.path.join(self._loc(), f"{self.ended_at}.sum.md"), "w") as f:
             f.write(sum)
+
+    def note(self, msg: str):
+        content = (
+            f"前情提要：\n\n{msg}\n\n现在我们继续……"
+            if self._chinese()
+            else f"Previously:\n\n{msg}\n\nNow we continue ..."
+        )
+        self.ended_at = _now_str()
+        self.conversation = [{"role": "system", "content": content}]
+        os.makedirs(self._loc(), exist_ok=True)
+        with open(self._log_path("note"), "w") as f:
+            f.write(msg)
+
+    def compaction(self) -> list:
+        schema = '{"abstract": [{"question": "xxx", "tools": [xxx, yyy], "files": [xxx, yyy], "urls": [xxx, yyy], "answer": "xxx"}]}'
+        prompt = (
+            f"简明地总结上述对话（包括前情和新的对话），里面提出了什么问题，使用了什么工具，打开了什么文件或网址，得到了什么答案，以JSON格式回复：`{schema}`"
+            if self._chinese()
+            else f"Briefly summarize the questions raised in the above conversation (including previous context and new dialogue), what tools were used, what files or URLs were opened, and what answers were obtained, reply in JSON format: `{schema}`"
+        )
+        return self.conversation + [{"role": "user", "content": prompt}]
 
     def sum_or_quest(self):
         def last_summary():
@@ -85,6 +107,7 @@ class Store:
                 or f.endswith("system.md")
                 or f.endswith("assistant.md")
                 or f.endswith("tool.md")
+                or f.endswith("note.md")
             )
         ]
         files.sort()
@@ -126,12 +149,27 @@ class Store:
                                 "content": json.dumps(content),
                             }
                         )
+                    elif role == "note":
+                        self.conversation.clear()
+                        self.conversation.append(
+                            {"role": "system", "content": f.read().strip()}
+                        )
                     else:
                         self.conversation.append(
                             {"role": role, "content": f.read().strip()}
                         )
             except Exception:
                 continue
+
+    def _chinese(self) -> bool:
+        def qa():
+            for c in self.conversation:
+                if c["role"] in ["user", "assistant"]:
+                    yield c["content"]
+
+        cn = sum(len(re.findall(r"[\u4e00-\u9fff]", c)) for c in qa())
+        tot = sum(len(c) for c in qa())
+        return (cn / tot) > 0.5
 
     def __str__(self):
         return f"**{self.started_at}** ~ **{self.ended_at}**: {self.sum_or_quest()}"

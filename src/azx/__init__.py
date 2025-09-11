@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+import time
 import traceback
 
 from . import prompt
@@ -51,7 +52,7 @@ class Chat:
                 self.store.log("user", user_input)
 
                 while True:
-                    content, tool_calls = self.client.stream_response(
+                    content, tool_calls, usage = self.client.stream_response(
                         self.store.conversation
                     )
                     whole_output = render_md_stream(content)
@@ -65,11 +66,31 @@ class Chat:
                             call.params_str(),
                             await self.tools.execute(call),
                         )
+                    self._auto_compact(usage)
                     if not len(calls):
                         break
 
             except Exception as e:
                 render_error(f"Error: {e}\n{traceback.format_exc()}")
+
+    def _auto_compact(self, usage):
+        self.store.usage = next(usage, 0).total_tokens
+        while self.store.usage > (self.model.get("window", 4096) * 0.9):
+            content, tools, usage = self.client.stream_response(
+                self.store.compaction(),
+                json=True,
+            )
+            print("<<<")
+            whole_output = render_md_stream(content)
+            print("<<<")
+            for _ in tools:
+                pass
+            token_used = next(usage, 0).completion_tokens
+            if len(whole_output) == 0:
+                time.sleep(1)
+                continue
+            self.store.usage = token_used
+            self.store.note(whole_output)
 
     async def _new_client(self):
         self.client = Client(**(self.model | {"tools": await self.tools.specs()}))
