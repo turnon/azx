@@ -42,16 +42,11 @@ def render_md_stream(strings) -> str:
     whole_string = ""
     current_block = ""
 
-    def flatten_strings():
-        for string in strings:
-            for char in string:
-                yield char
-
     def block_recognized():
         nonlocal current_block
         md = MarkdownIt("js-default")
         tokens_len = 0
-        for char in flatten_strings():
+        for char in _flatten_strings(strings):
             current_block += char
             tokens = md.parse(current_block)
             new_block = (
@@ -82,3 +77,18 @@ def render_md_stream(strings) -> str:
     live.stop()
 
     return whole_string
+
+
+def render_abs_stream(strings) -> str:
+    whole_string = ""
+    with Live(console=console, refresh_per_second=4) as live:
+        for char in _flatten_strings(strings):
+            whole_string += char
+            live.update(Text(whole_string, "bright_black"))
+    return whole_string
+
+
+def _flatten_strings(strings):
+    for string in strings:
+        for char in string:
+            yield char

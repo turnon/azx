@@ -9,6 +9,7 @@ from . import arguments
 from .agents import Client
 from .configure import Configure
 from .renderer import (
+    render_abs_stream,
     render_error,
     render_md_full,
     render_md_stream,
@@ -80,12 +81,12 @@ class Chat:
                 self.store.compaction(),
                 json=True,
             )
-            print("<<< taking note ...")
-            whole_output = render_md_stream(content)
+            render_abs_stream("<<< taking note ...")
+            whole_output = render_abs_stream(content)
             for _ in tools:
                 pass
             token_used = next(usage, 0).completion_tokens
-            print(f"<<< note taken: {token_used}/{self.store.usage}")
+            render_abs_stream(f"<<< note taken: {token_used}/{self.store.usage}")
             if len(whole_output) == 0:
                 time.sleep(1)
                 continue
