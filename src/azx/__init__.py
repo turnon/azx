@@ -12,7 +12,7 @@ from .renderer import (
     render_error,
     render_md_full,
     render_md_stream,
-    render_tool_call,
+    render_sys_stream,
     render_user_input,
 )
 from .storage import Store, history
@@ -59,7 +59,7 @@ class Chat:
                     self.store.log("assistant", whole_output)
                     calls = Calls(tool_calls)
                     for call in calls:
-                        render_tool_call(f"{call.fn}({call.params_str()})")
+                        render_sys_stream(f"{call.fn}({call.params_str()})")
                         self.store.tool(
                             call.id,
                             call.fn,
@@ -75,17 +75,17 @@ class Chat:
 
     def _auto_compact(self, usage):
         self.store.usage = next(usage, 0).total_tokens
-        while self.store.usage > (self.model.get("window", 4096) * 0.9):
+        while self.store.usage > self.model.get("window", 3600):
             content, tools, usage = self.client.stream_response(
                 self.store.compaction(),
                 json=True,
             )
-            print("<<<")
-            whole_output = render_md_stream(content)
-            print("<<<")
+            render_sys_stream("<<< taking note ...")
+            whole_output = render_sys_stream(content)
             for _ in tools:
                 pass
             token_used = next(usage, 0).completion_tokens
+            render_sys_stream(f"<<< note taken: {token_used}/{self.store.usage}")
             if len(whole_output) == 0:
                 time.sleep(1)
                 continue
@@ -93,7 +93,9 @@ class Chat:
             self.store.note(whole_output)
 
     async def _new_client(self):
-        self.client = Client(**(self.model | {"tools": await self.tools.specs()}))
+        conn_keys = ["name", "base_url", "model", "api_key"]
+        conn_kv = {k: self.model[k] for k in self.model if k in conn_keys}
+        self.client = Client(**(conn_kv | {"tools": await self.tools.specs()}))
 
     async def _other_command(self, user_cmd):
         if match := re.match(r"^(?:/c|/client)$", user_cmd):
@@ -128,10 +130,12 @@ class Chat:
             for msg in self.store.conversation:
                 if msg["role"] == "user":
                     render_user_input(msg["content"])
+                elif msg["role"] == "system":
+                    render_sys_stream(msg["content"])
                 elif msg["role"] == "assistant":
                     render_md_stream(msg["content"])
                     for fn in msg.get("tool_calls", []):
-                        render_tool_call(
+                        render_sys_stream(
                             f"{fn['function']['name']}({fn['function']['arguments']})"
                         )
             return True

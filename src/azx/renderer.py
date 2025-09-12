@@ -15,6 +15,8 @@ console = Console(
     )
 )
 
+refresh_freq = 25
+
 
 def render_error(string):
     text = Text(string)
@@ -28,12 +30,6 @@ def render_user_input(string):
     console.print(text)
 
 
-def render_tool_call(string):
-    text = Text(f"{string}...")
-    text.stylize("bright_black")
-    console.print(text)
-
-
 def render_md_full(string):
     console.print(Markdown(string))
 
@@ -42,16 +38,11 @@ def render_md_stream(strings) -> str:
     whole_string = ""
     current_block = ""
 
-    def flatten_strings():
-        for string in strings:
-            for char in string:
-                yield char
-
     def block_recognized():
         nonlocal current_block
         md = MarkdownIt("js-default")
         tokens_len = 0
-        for char in flatten_strings():
+        for char in _flatten_strings(strings):
             current_block += char
             tokens = md.parse(current_block)
             new_block = (
@@ -63,7 +54,7 @@ def render_md_stream(strings) -> str:
             yield (char, new_block)
 
     def new_live() -> Live:
-        live = Live(console=console, refresh_per_second=25)
+        live = Live(console=console, refresh_per_second=refresh_freq)
         live.start()
         return live
 
@@ -82,3 +73,18 @@ def render_md_stream(strings) -> str:
     live.stop()
 
     return whole_string
+
+
+def render_sys_stream(strings) -> str:
+    whole_string = ""
+    with Live(console=console, refresh_per_second=refresh_freq) as live:
+        for char in _flatten_strings(strings):
+            whole_string += char
+            live.update(Text(whole_string, "bright_black"))
+    return whole_string
+
+
+def _flatten_strings(strings):
+    for string in strings:
+        for char in string:
+            yield char
