@@ -60,11 +60,11 @@ class Store:
             f.write(msg)
 
     def compaction(self) -> list:
-        schema = '{"abstract": [{"question": "xxx", "tools": [xxx, yyy], "files": [xxx, yyy], "urls": [xxx, yyy], "answer": "xxx"}]}'
+        schema = '{"Q&A": [{"question": "xxx", "answer": "xxx"}], "resources": [{"uri": "xxx", content: "xxx"}]}'
         prompt = (
-            f"简明地总结上述对话（包括前情和新的对话），里面提出了什么问题，使用了什么工具，打开了什么文件或网址，得到了什么答案，以JSON格式回复：`{schema}`"
+            f"简明地总结上述对话（包括前情和新的对话）：1、里面提出了什么问题，得到了什么答案，并尽量整合多个相关的问答为一个问答；2、使用了什么文件或网址，它们涉及什么内容。以JSON格式回复：`{schema}`"
             if self._chinese()
-            else f"Briefly summarize the questions raised in the above conversation (including previous context and new dialogue), what tools were used, what files or URLs were opened, and what answers were obtained, reply in JSON format: `{schema}`"
+            else f"Briefly summarize the above conversation (including previous context and new dialogue): 1. What questions were raised and what answers were obtained, integrating multiple related Q&As into consolidated pairs; 2. What files or URLs were used and what content they involved. Reply in JSON format: `{schema}`"
         )
         return self.conversation + [{"role": "user", "content": prompt}]
 
