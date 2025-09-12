@@ -9,11 +9,10 @@ from . import arguments
 from .agents import Client
 from .configure import Configure
 from .renderer import (
-    render_abs_stream,
     render_error,
     render_md_full,
     render_md_stream,
-    render_tool_call,
+    render_sys_stream,
     render_user_input,
 )
 from .storage import Store, history
@@ -60,7 +59,7 @@ class Chat:
                     self.store.log("assistant", whole_output)
                     calls = Calls(tool_calls)
                     for call in calls:
-                        render_tool_call(f"{call.fn}({call.params_str()})")
+                        render_sys_stream(f"{call.fn}({call.params_str()})")
                         self.store.tool(
                             call.id,
                             call.fn,
@@ -81,12 +80,12 @@ class Chat:
                 self.store.compaction(),
                 json=True,
             )
-            render_abs_stream("<<< taking note ...")
-            whole_output = render_abs_stream(content)
+            render_sys_stream("<<< taking note ...")
+            whole_output = render_sys_stream(content)
             for _ in tools:
                 pass
             token_used = next(usage, 0).completion_tokens
-            render_abs_stream(f"<<< note taken: {token_used}/{self.store.usage}")
+            render_sys_stream(f"<<< note taken: {token_used}/{self.store.usage}")
             if len(whole_output) == 0:
                 time.sleep(1)
                 continue
@@ -131,10 +130,12 @@ class Chat:
             for msg in self.store.conversation:
                 if msg["role"] == "user":
                     render_user_input(msg["content"])
+                elif msg["role"] == "system":
+                    render_sys_stream(msg["content"])
                 elif msg["role"] == "assistant":
                     render_md_stream(msg["content"])
                     for fn in msg.get("tool_calls", []):
-                        render_tool_call(
+                        render_sys_stream(
                             f"{fn['function']['name']}({fn['function']['arguments']})"
                         )
             return True

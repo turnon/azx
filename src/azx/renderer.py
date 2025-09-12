@@ -15,6 +15,8 @@ console = Console(
     )
 )
 
+refresh_freq = 25
+
 
 def render_error(string):
     text = Text(string)
@@ -25,12 +27,6 @@ def render_error(string):
 def render_user_input(string):
     text = Text(f">>> {string}")
     text.stylize("green")
-    console.print(text)
-
-
-def render_tool_call(string):
-    text = Text(f"{string}...")
-    text.stylize("bright_black")
     console.print(text)
 
 
@@ -58,7 +54,7 @@ def render_md_stream(strings) -> str:
             yield (char, new_block)
 
     def new_live() -> Live:
-        live = Live(console=console, refresh_per_second=25)
+        live = Live(console=console, refresh_per_second=refresh_freq)
         live.start()
         return live
 
@@ -79,9 +75,9 @@ def render_md_stream(strings) -> str:
     return whole_string
 
 
-def render_abs_stream(strings) -> str:
+def render_sys_stream(strings) -> str:
     whole_string = ""
-    with Live(console=console, refresh_per_second=4) as live:
+    with Live(console=console, refresh_per_second=refresh_freq) as live:
         for char in _flatten_strings(strings):
             whole_string += char
             live.update(Text(whole_string, "bright_black"))

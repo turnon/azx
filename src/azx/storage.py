@@ -48,13 +48,8 @@ class Store:
             f.write(sum)
 
     def note(self, msg: str):
-        content = (
-            f"前情提要：\n\n{msg}\n\n现在我们继续……"
-            if self._chinese()
-            else f"Previously:\n\n{msg}\n\nNow we continue ..."
-        )
+        self._note(msg)
         self.ended_at = _now_str()
-        self.conversation = [{"role": "system", "content": content}]
         os.makedirs(self._loc(), exist_ok=True)
         with open(self._log_path("note"), "w") as f:
             f.write(msg)
@@ -150,16 +145,22 @@ class Store:
                             }
                         )
                     elif role == "note":
-                        self.conversation.clear()
-                        self.conversation.append(
-                            {"role": "system", "content": f.read().strip()}
-                        )
+                        self._note(f.read().strip())
                     else:
                         self.conversation.append(
                             {"role": role, "content": f.read().strip()}
                         )
             except Exception:
                 continue
+
+    def _note(self, msg):
+        content = (
+            f"前情提要：\n\n{msg}\n\n现在我们继续……"
+            if self._chinese()
+            else f"Previously:\n\n{msg}\n\nNow we continue ..."
+        )
+        self.conversation.clear()
+        self.conversation.append({"role": "system", "content": content})
 
     def _chinese(self) -> bool:
         def qa():
