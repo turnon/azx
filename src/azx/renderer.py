@@ -1,9 +1,34 @@
 from markdown_it import MarkdownIt
 from rich.console import Console
 from rich.live import Live
-from rich.markdown import Markdown
+from rich.markdown import Markdown, TextElement
 from rich.text import Text
 from rich.theme import Theme
+
+
+class MyHeading(TextElement):
+    @classmethod
+    def create(cls, _, token):
+        return cls(token.tag)
+
+    def on_enter(self, context) -> None:
+        self.text = Text()
+        context.enter_style("bold")
+
+    def __init__(self, tag) -> None:
+        self.tag = tag
+        super().__init__()
+
+    def __rich_console__(self, _console, _options):
+        text = Text("".join("#" for _ in range(int(self.tag[1:]))))
+        text.stylize("yellow")
+        text.stylize("bold")
+        text.append(" ")
+        text.append_text(self.text)
+        yield text
+
+
+Markdown.elements["heading_open"] = MyHeading
 
 console = Console(
     theme=Theme(
