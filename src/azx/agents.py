@@ -36,10 +36,11 @@ class Client:
 
     def stream_response(self, messages: list[dict], json: bool = False):
         response_format = {"type": "json_object"} if json else NOT_GIVEN
+        tools = self.tools if self.tools else NOT_GIVEN
         stream = self._client.chat.completions.create(
             model=self.model,
             messages=messages,
-            tools=self.tools,
+            tools=tools,
             response_format=response_format,
             stream=True,
             stream_options={"include_usage": True},

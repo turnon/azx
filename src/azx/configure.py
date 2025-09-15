@@ -9,7 +9,7 @@ When a function is called, it returns a JSON object with the following structure
 
 {
   "status": "success | error | partial",
-  "data": "xxx",// Primary result or response data. It will be None unless status success 
+  "data": "xxx",// Primary result or response data. It will be None unless status success
   "err": "xxx", // Human-readable message for context or errors for. It will be None unless status error
   "proceed": "xxx" // What to do next. It will be None unless status partial
 }
@@ -29,6 +29,17 @@ class Configure:
 
     def find_model(self, name_or_num) -> dict:
         for i, k in enumerate(self.config["keys"]):
+            if k["name"] == name_or_num or str(i + 1) == name_or_num:
+                return k
+        return None
+
+    def tools(self) -> str:
+        return "\n".join(
+            [f"{i + 1}. {k['name']}" for i, k in enumerate(self.config["mcp"])]
+        )
+
+    def find_tool(self, name_or_num) -> str:
+        for i, k in enumerate(self.config["mcp"]):
             if k["name"] == name_or_num or str(i + 1) == name_or_num:
                 return k
         return None

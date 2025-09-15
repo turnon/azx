@@ -154,13 +154,19 @@ class Chat:
             render_md_stream([sum])
             return True
 
-        if match := re.match(r"^(?:/t|/tool)\+ (.+)$", user_cmd):
-            await self.tools.add_mcp(match.group(1))
+        if user_cmd in ("/tools"):
+            render_md_full(f"tools:\n{config.tools()}")
+            return True
+
+        if match := re.match(r"^/tool\+ (.+)$", user_cmd):
+            t = config.find_tool(match.group(1))
+            await self.tools.add_mcp(t["cmd"], t["args"])
             await self._new_client()
             return True
 
-        if match := re.match(r"^(?:/t|/tool)\- (.+)$", user_cmd):
-            await self.tools.del_mcp(match.group(1))
+        if match := re.match(r"^/tool\- (.+)$", user_cmd):
+            t = config.find_tool(match.group(1))
+            await self.tools.del_mcp(t["cmd"], t["args"])
             await self._new_client()
             return True
 

@@ -1,275 +1,12 @@
 import inspect
-import os
-import re
-import shutil
 
 import yaml
-from markitdown import MarkItDown
 from fastmcp import Client
+from fastmcp.client.transports import StdioTransport
 
 
 class LocalTools:
-    definitions = [
-        {
-            "type": "function",
-            "function": {
-                "name": "read_file",
-                "description": "Read data from a local file",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "path to a local file",
-                        },
-                    },
-                    "required": ["path"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "write_file",
-                "description": "Write data to local file",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "path to a local file",
-                        },
-                        "data": {
-                            "type": "string",
-                            "description": "data to write",
-                        },
-                    },
-                    "required": ["path"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "remove_file",
-                "description": "Remove a local file, after user approval",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "path to a local file to remove",
-                        },
-                    },
-                    "required": ["path"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "create_dir",
-                "description": "Create a local directory",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "path to a local directory to create",
-                        },
-                    },
-                    "required": ["path"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "read_dir",
-                "description": "Read directory structure like tree command",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "path to a local directory to read",
-                        },
-                    },
-                    "required": ["path"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "remove_dir",
-                "description": "Remove a local directory, after user approval",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "path to a local directory to remove",
-                        },
-                    },
-                    "required": ["path"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "grep_files",
-                "description": "Search for a pattern in a file using regular expressions",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "path to a local file or directory to search in",
-                        },
-                        "regexp": {
-                            "type": "string",
-                            "description": "regular expression pattern to search for",
-                        },
-                    },
-                    "required": ["path", "regexp"],
-                },
-            },
-        },
-    ]
-
-    @staticmethod
-    def read_file(path) -> dict:
-        try:
-            content = MarkItDown().convert(path).text_content
-            return {"status": "success", "data": content, "err": None, "proceed": None}
-        except Exception as e:
-            return {"status": "error", "data": None, "err": str(e), "proceed": None}
-
-    @staticmethod
-    def write_file(path, data) -> dict:
-        try:
-            with open(path, "w") as f:
-                f.write(data)
-            return {"status": "success", "data": "", "err": None, "proceed": None}
-        except Exception as e:
-            return {"status": "error", "data": None, "err": str(e), "proceed": None}
-
-    @staticmethod
-    def remove_file(path) -> dict:
-        try:
-            os.remove(path)
-            return {"status": "success", "data": "", "err": None, "proceed": None}
-        except Exception as e:
-            return {"status": "error", "data": None, "err": str(e), "proceed": None}
-
-    @staticmethod
-    def create_dir(path) -> dict:
-        try:
-            os.makedirs(path, exist_ok=True)
-            return {"status": "success", "data": "", "err": None, "proceed": None}
-        except Exception as e:
-            return {"status": "error", "data": None, "err": str(e), "proceed": None}
-
-    @staticmethod
-    def read_dir(path) -> dict:
-        try:
-            tree_output = []
-
-            def generate_tree(directory, prefix=""):
-                try:
-                    items = sorted(os.listdir(directory))
-                    items = [item for item in items if not item.startswith(".")]
-                except PermissionError:
-                    tree_output.append(f"{prefix}[Permission Denied]")
-                    return
-
-                for i, item in enumerate(items):
-                    item_path = os.path.join(directory, item)
-                    is_last = i == len(items) - 1
-
-                    if is_last:
-                        tree_output.append(f"{prefix}└── {item}")
-                        new_prefix = prefix + "    "
-                    else:
-                        tree_output.append(f"{prefix}├── {item}")
-                        new_prefix = prefix + "│   "
-
-                    if os.path.isdir(item_path):
-                        generate_tree(item_path, new_prefix)
-
-            if not os.path.exists(path):
-                return {
-                    "status": "error",
-                    "data": None,
-                    "err": "Directory does not exist",
-                    "proceed": None,
-                }
-
-            if not os.path.isdir(path):
-                return {
-                    "status": "error",
-                    "data": None,
-                    "err": "Path is not a directory",
-                    "proceed": None,
-                }
-
-            tree_output.append(os.path.basename(os.path.abspath(path)) or path)
-            generate_tree(path)
-
-            return {
-                "status": "success",
-                "data": "\n".join(tree_output),
-                "err": None,
-                "proceed": None,
-            }
-        except Exception as e:
-            return {"status": "error", "data": None, "err": str(e), "proceed": None}
-
-    @staticmethod
-    def remove_dir(path) -> dict:
-        try:
-            shutil.rmtree(path)
-            return {"status": "success", "data": None, "err": None, "proceed": None}
-        except Exception as e:
-            return {"status": "error", "data": None, "err": str(e), "proceed": None}
-
-    @staticmethod
-    def grep_files(path, regexp) -> dict:
-        def get_files(path):
-            if os.path.isfile(path):
-                yield path
-            elif os.path.isdir(path):
-                for root, dirs, files in os.walk(path):
-                    for file in files:
-                        yield os.path.join(root, file)
-
-        def grep_file(path, pattern):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    for line_num, line in enumerate(f, 1):
-                        if pattern.search(line):
-                            yield f"{file_path}:{line_num}: {line.rstrip()}"
-            except (UnicodeDecodeError, PermissionError):
-                pass
-
-        try:
-            pattern = re.compile(regexp)
-            matched_lines = []
-
-            for file_path in get_files(path):
-                for line in grep_file(file_path, pattern):
-                    matched_lines.append(line)
-
-            return {
-                "status": "success",
-                "data": "\n".join(matched_lines) if matched_lines else "",
-                "err": None,
-                "proceed": None,
-            }
-        except Exception as e:
-            return {"status": "error", "data": None, "err": str(e), "proceed": None}
+    definitions = []
 
 
 class MCPClient:
@@ -322,7 +59,7 @@ class Call:
 
         return str(
             {
-                name: val if len(val) <= 60 else f"{val[:28]}....{val[-28:]}"
+                name: val if len(val) <= 120 else f"{val[:58]}....{val[-58:]}"
                 for name, val in stringified_value()
             }
         )
@@ -376,18 +113,21 @@ class Tools:
     def __init__(self):
         self.mcps: dict[str, MCPClient] = {}
 
-    async def add_mcp(self, transport):
-        if transport in self.mcps.items():
+    async def add_mcp(self, cmd, args):
+        full_cmd = " ".join([cmd] + args)
+        if full_cmd in self.mcps.items():
             return
+        transport = StdioTransport(command=cmd, args=args)
         mcp = MCPClient(Client(transport))
         await mcp.__aenter__()
-        self.mcps[transport] = mcp
+        self.mcps[full_cmd] = mcp
 
-    async def del_mcp(self, transport):
-        mcp = self.mcps.get(transport, None)
+    async def del_mcp(self, cmd, args):
+        full_cmd = " ".join([cmd] + args)
+        mcp = self.mcps.get(full_cmd, None)
         if mcp is None:
             return
-        del self.mcps[transport]
+        del self.mcps[full_cmd]
         await mcp.__aexit__(None, None, None)
 
     async def specs(self) -> list:
