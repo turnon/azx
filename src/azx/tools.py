@@ -40,10 +40,10 @@ class MCPClient:
         result = await self.client.call_tool(name, params, raise_on_error=False)
         if result.is_error:
             err = result.content[0].text
-            return {"status": "error", "data": None, "err": err, "proceed": None}
+            return {"status": "error", "message": err}
 
         data = "".join([c.text for c in result.content if c.type == "text"])
-        return {"status": "success", "data": data, "err": None, "proceed": None}
+        return {"status": "success", "message": data}
 
 
 class Call:

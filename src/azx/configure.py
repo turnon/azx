@@ -9,9 +9,7 @@ When a function is called, it returns a JSON object with the following structure
 
 {
   "status": "success | error | partial",
-  "data": "xxx",// Primary result or response data. It will be None unless status success
-  "err": "xxx", // Human-readable message for context or errors for. It will be None unless status error
-  "proceed": "xxx" // What to do next. It will be None unless status partial
+  "message": "xxx", // If status is success, then message is primary result or response data. If status is error, then message is context or error explaination. If status is partial, then message is what to do next
 }
 """.strip()
 

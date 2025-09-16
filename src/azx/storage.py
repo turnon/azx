@@ -7,8 +7,6 @@ base_dir = os.path.expanduser("~/.azx")
 
 
 class Store:
-    tool_status_map = {"success": "data", "error": "err", "partial": "proceed"}
-
     def __init__(self):
         self.started_at = _now_str()
         self.ended_at = self.started_at
@@ -29,7 +27,7 @@ class Store:
         )
 
         status = ret["status"]
-        msg = ret[self.tool_status_map[status]]
+        msg = ret["message"]
 
         os.makedirs(self._loc(), exist_ok=True)
         with open(self._log_path("tool"), "w") as f:
@@ -124,17 +122,9 @@ class Store:
                         fn_id = f.readline().strip()
                         fn_name = f.readline().strip()
                         fn_args = f.readline().strip()
-                        content = {
-                            "status": None,
-                            "data": None,
-                            "err": None,
-                            "proceed": None,
-                        }
                         fn_status = f.readline().strip()
                         fn_msg = f.read().strip()
-                        content["status"] = fn_status
-                        content[self.tool_status_map[fn_status]] = fn_msg
-                        self.tool_status_map[fn_status]
+                        content = {"status": fn_status, "message": fn_msg}
                         self._add_tool_to_last_assistant_msg(fn_id, fn_name, fn_args)
                         self.conversation.append(
                             {
