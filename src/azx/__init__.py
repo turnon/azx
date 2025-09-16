@@ -57,15 +57,13 @@ class Chat:
                     )
                     whole_output = render_md_stream(content)
                     self.store.log("assistant", whole_output)
+                    self.store.usage = next(usage, 0).total_tokens
                     calls = Calls(tool_calls)
                     for call in calls:
                         render_sys_stream(f"{call.fn}({call.params_str()})")
-                        self.store.tool(
-                            call.id,
-                            call.fn,
-                            call.params_str(),
-                            await self.tools.execute(call),
-                        )
+                        tool_ret = await self.tools.execute(call)
+                        self._compact_tool_ret(tool_ret)
+                        self.store.tool(call.id, call.fn, call.params_str(), tool_ret)
                     self._auto_compact(usage)
                     if not len(calls):
                         break
@@ -73,8 +71,18 @@ class Chat:
             except Exception as e:
                 render_error(f"Error: {e}\n{traceback.format_exc()}")
 
+    def _compact_tool_ret(self, tool_ret):
+        def estimate(text):
+            chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", text))
+            other_chars = len(text) - chinese_chars
+            estimated_tokens = (chinese_chars * 0.6) + (other_chars * 0.3)
+            return int(estimated_tokens)
+
+        limit = self.model.get("window", 3600)
+        while self.store.usage + estimate(tool_ret["message"]) > limit:
+            tool_ret["message"] = tool_ret["message"].rsplit("\n", 1)[0]
+
     def _auto_compact(self, usage):
-        self.store.usage = next(usage, 0).total_tokens
         while self.store.usage > self.model.get("window", 3600):
             content, tools, usage = self.client.stream_response(
                 self.store.compaction(),
